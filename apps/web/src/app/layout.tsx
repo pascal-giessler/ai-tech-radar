@@ -1,23 +1,16 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Instrument_Serif, Space_Grotesk } from "next/font/google";
-import Link from "next/link";
+import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 
 import "./globals.css";
 
-const instrumentSerif = Instrument_Serif({
-  weight: "400",
-  style: ["normal", "italic"],
+const plexSans = IBM_Plex_Sans({
+  weight: ["300", "400", "500", "600", "700"],
   subsets: ["latin"],
-  variable: "--font-instrument-serif",
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-space-grotesk",
+  variable: "--font-plex-sans",
 });
 
 const plexMono = IBM_Plex_Mono({
-  weight: ["400", "500"],
+  weight: ["300", "400", "500"],
   subsets: ["latin"],
   variable: "--font-plex-mono",
 });
@@ -31,39 +24,14 @@ export const metadata: Metadata = {
     template: "%s · AI Radar",
   },
   description:
-    "AI Radar is a living technology radar: trending GitHub repos and AI dev tools placed by semantic cluster and adoption ring (Adopt · Trial · Assess · Hold), computed automatically and re-scanned continuously — the Thoughtworks radar's mental model, kept current by data.",
+    "AI Radar is a live scanning radar for the open-source AI stack: trending GitHub repos and AI dev tools plotted by momentum (range) and semantic category (bearing), re-scanned continuously. Explore the sweep, scrub 13 weeks of history, open a full dossier.",
   openGraph: { siteName: "AI Radar", type: "website" },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${instrumentSerif.variable} ${spaceGrotesk.variable} ${plexMono.variable} h-full antialiased`}
-    >
-      <body className="flex min-h-full flex-col">
-        <header className="pointer-events-none fixed inset-x-0 top-0 z-40 flex items-baseline justify-between px-5 py-4 sm:px-8">
-          <Link href="/" className="pointer-events-auto group flex items-baseline gap-3">
-            <span className="font-display text-2xl tracking-wide text-starlight">
-              AI&nbsp;Radar
-            </span>
-            <span className="hidden font-mono text-[11px] tracking-[0.22em] uppercase text-muted sm:inline">
-              live atlas of the tool sky
-            </span>
-          </Link>
-          <nav className="pointer-events-auto flex items-center gap-5 font-mono text-[12px] tracking-wide">
-            <Link href="/tools" className="text-muted transition-colors hover:text-phosphor">
-              catalog
-            </Link>
-            <a href="/llms.txt" className="text-muted transition-colors hover:text-phosphor">
-              llms.txt
-            </a>
-          </nav>
-        </header>
-        {children}
-      </body>
+    <html lang="en" className={`${plexSans.variable} ${plexMono.variable} h-full antialiased`}>
+      <body className="min-h-full">{children}</body>
     </html>
   );
 }

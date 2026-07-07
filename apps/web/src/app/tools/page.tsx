@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { SiteHeader } from "@/components/SiteHeader";
 import { ToolCard } from "@/components/ToolCard";
 import { getTools } from "@/lib/api";
 
@@ -15,7 +16,9 @@ export default async function ToolsPage() {
   const tools = await getTools(200).catch(() => []);
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-5 pt-28 pb-24 sm:px-8">
+    <>
+      <SiteHeader />
+      <main className="mx-auto w-full max-w-4xl px-5 pt-12 pb-24 sm:px-8">
       <p className="eyebrow">catalog</p>
       <h1 className="font-display mt-3 text-5xl text-starlight">
         Every tool on the radar
@@ -34,6 +37,7 @@ export default async function ToolsPage() {
           tools.map((tool) => <ToolCard key={tool.slug} tool={tool} />)
         )}
       </div>
-    </main>
+      </main>
+    </>
   );
 }
