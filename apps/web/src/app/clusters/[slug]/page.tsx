@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { SiteHeader } from "@/components/SiteHeader";
 import { ToolCard } from "@/components/ToolCard";
 import { getCluster } from "@/lib/api";
 
@@ -40,7 +41,9 @@ export default async function ClusterPage({ params }: Props) {
   };
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-5 pt-28 pb-24 sm:px-8">
+    <>
+      <SiteHeader />
+      <main className="mx-auto w-full max-w-4xl px-5 pt-12 pb-24 sm:px-8">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -66,6 +69,7 @@ export default async function ClusterPage({ params }: Props) {
           <ToolCard key={tool.slug} tool={tool} />
         ))}
       </div>
-    </main>
+      </main>
+    </>
   );
 }
