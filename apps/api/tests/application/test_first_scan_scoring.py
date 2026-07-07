@@ -30,12 +30,26 @@ def test_first_scan_ranks_fast_growing_new_repo_above_old_giant() -> None:
     assert rocket.trend_score > monument.trend_score
 
 
-def test_second_scan_uses_real_delta_not_estimate() -> None:
+def test_score_is_cadence_independent_when_no_recent_growth() -> None:
+    """A flat inter-scan window is noise, not a signal: momentum holds at the
+    tool's lifetime trend rather than collapsing to zero."""
     repo = InMemoryToolRepository()
-    ingest([discovered(name="tool", stars=1000)], repo)
+    ingest([discovered(name="tool", stars=8000, repo_created_at=datetime(2026, 4, 1, tzinfo=UTC))], repo)
     first_score = repo.get_by_slug("acme-tool").trend_score
 
-    ingest([discovered(name="tool", stars=1000)], repo)  # no growth between scans
+    ingest([discovered(name="tool", stars=8000, repo_created_at=datetime(2026, 4, 1, tzinfo=UTC))], repo)
     second_score = repo.get_by_slug("acme-tool").trend_score
 
-    assert second_score < first_score  # real zero-velocity beats the optimistic estimate
+    assert second_score == first_score
+    assert second_score > 20  # healthy lifetime trend keeps it out of "Hold"
+
+
+def test_real_recent_surge_boosts_above_lifetime_floor() -> None:
+    repo = InMemoryToolRepository()
+    ingest([discovered(name="tool", stars=5000, repo_created_at=datetime(2024, 1, 1, tzinfo=UTC))], repo)
+    baseline = repo.get_by_slug("acme-tool").trend_score
+
+    ingest([discovered(name="tool", stars=9000, repo_created_at=datetime(2024, 1, 1, tzinfo=UTC))], repo)
+    surged = repo.get_by_slug("acme-tool").trend_score
+
+    assert surged > baseline  # a real +4000 delta outweighs the lifetime estimate

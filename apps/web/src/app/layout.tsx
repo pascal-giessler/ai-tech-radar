@@ -27,11 +27,11 @@ const SITE_URL = process.env.SITE_URL ?? "http://localhost:3000";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "AI Radar — a live atlas of the tool sky",
+    default: "AI Radar — the living technology radar for AI dev tools",
     template: "%s · AI Radar",
   },
   description:
-    "AI Radar maps trending GitHub repos and AI dev tools into a live semantic landscape. Tools that solve the same problem cluster together — explore the sky, compare neighbours, pick faster.",
+    "AI Radar is a living technology radar: trending GitHub repos and AI dev tools placed by semantic cluster and adoption ring (Adopt · Trial · Assess · Hold), computed automatically and re-scanned continuously — the Thoughtworks radar's mental model, kept current by data.",
   openGraph: { siteName: "AI Radar", type: "website" },
 };
 

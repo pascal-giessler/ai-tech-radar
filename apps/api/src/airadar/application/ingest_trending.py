@@ -2,6 +2,7 @@ from airadar.application.dto import IngestReport
 from airadar.domain.model.repo_ref import RepoRef
 from airadar.domain.model.tool import Tool
 from airadar.domain.ports import Clock, ToolRepository, ToolSource
+from airadar.domain.services.adoption_classifier import AdoptionClassifier
 from airadar.domain.services.trend_scorer import TrendScorer
 
 SECONDS_PER_DAY = 86_400
@@ -9,12 +10,18 @@ SECONDS_PER_DAY = 86_400
 
 class IngestTrendingTools:
     def __init__(
-        self, source: ToolSource, tools: ToolRepository, scorer: TrendScorer, clock: Clock
+        self,
+        source: ToolSource,
+        tools: ToolRepository,
+        scorer: TrendScorer,
+        clock: Clock,
+        classifier: AdoptionClassifier | None = None,
     ) -> None:
         self._source = source
         self._tools = tools
         self._scorer = scorer
         self._clock = clock
+        self._classifier = classifier or AdoptionClassifier()
 
     def execute(self) -> IngestReport:
         now = self._clock.now()
@@ -45,13 +52,20 @@ class IngestTrendingTools:
                 updated += 1
 
             age_days = (now - tool.repo_created_at).total_seconds() / SECONDS_PER_DAY
-            if tool.stars_prev is None:
-                # First sighting: no delta yet, estimate a week of the lifetime star rate.
-                gained = round(tool.stars / max(age_days, 1.0) * 7)
-            else:
-                gained = tool.stars_gained
+            # Momentum must not depend on scan cadence: a 30-min window shows ~0 real
+            # growth for almost every repo, which would collapse everything to "Hold".
+            # Use a lifetime weekly star rate as a floor, and let a genuine recent
+            # surge (real delta) rise above it.
+            lifetime_week = round(tool.stars / max(age_days, 1.0) * 7)
+            gained = max(tool.stars_gained, lifetime_week)
             tool.trend_score = self._scorer.score(
                 stars=tool.stars, stars_gained=gained, age_days=age_days
+            )
+            tool.ring = self._classifier.classify(
+                stars=tool.stars,
+                stars_gained=gained,
+                trend_score=tool.trend_score,
+                age_days=age_days,
             )
             self._tools.upsert(tool)
 

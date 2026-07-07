@@ -21,8 +21,9 @@ export default async function ToolsPage() {
         Every tool on the radar
       </h1>
       <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted">
-        Ranked by momentum — how fast each tool is gaining stars right now, weighted
-        toward the newly launched. Re-scanned automatically, around the clock.
+        Ranked by momentum and tagged with a live adoption ring — Adopt, Trial, Assess
+        or Hold — computed from each tool&apos;s maturity and momentum. Re-scanned
+        automatically, around the clock.
       </p>
       <div className="mt-12">
         {tools.length === 0 ? (

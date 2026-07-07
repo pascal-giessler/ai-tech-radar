@@ -11,6 +11,9 @@ export function buildLlmsTxt(data: LandscapeData, siteUrl: string): string {
     "> A live semantic landscape of trending GitHub repos and AI developer tools.",
     "> Tools are clustered automatically by what they do (embeddings), ranked by",
     "> star momentum, and re-scanned continuously. Clusters are emergent, not curated.",
+    ">",
+    "> Each tool carries an adoption ring in brackets — [adopt] proven, [trial] worth",
+    "> piloting, [assess] emerging, [hold] cooling — computed live from its signals.",
     "",
     `Landscape JSON: ${siteUrl}/api/landscape`,
     `Catalog: ${siteUrl}/tools`,
@@ -31,8 +34,9 @@ export function buildLlmsTxt(data: LandscapeData, siteUrl: string): string {
     );
     for (const tool of members) {
       const desc = tool.description ? `: ${tool.description}` : "";
+      const ring = tool.ring ? ` [${tool.ring}]` : "";
       lines.push(
-        `- [${tool.owner}/${tool.name}](${siteUrl}/tools/${tool.slug})${desc} (${tool.stars} stars)`,
+        `- [${tool.owner}/${tool.name}](${siteUrl}/tools/${tool.slug})${ring}${desc} (${tool.stars} stars)`,
       );
     }
     lines.push("");
