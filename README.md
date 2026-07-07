@@ -1,10 +1,19 @@
 # AI Radar
 
-**A live atlas of the tool sky.** AI Radar ingests trending GitHub repos and AI dev
-tools automatically, embeds what they *do*, and draws them as an explorable 3D
-landscape where semantic neighbours sit together — `headroom` and `rtk` cluster under
-token-usage minimization, `litellm` lands in AI-proxy territory. Categories emerge
-from the data; nothing is hand-curated, and nothing goes stale.
+**The living technology radar for AI dev tools.** AI Radar ingests trending GitHub
+repos and AI dev tools automatically and places them on two axes — the same mental
+model as the Thoughtworks Technology Radar, but computed live and never stale:
+
+- **Semantic cluster** (the *what*): tools are embedded by what they do and grouped
+  into emergent territories — `headroom` and `rtk` near token minimization, `litellm`
+  in AI-proxy territory. Nothing is hand-curated.
+- **Adoption ring** (the *recommendation*): every tool gets an **Adopt / Trial /
+  Assess / Hold** ring, computed from its maturity (stars) and momentum. Adopt is the
+  proven core; Assess is the emerging edge.
+
+Two views of the same data: a 3D **Galaxy** (semantic space) and a classic 2D
+**Radar** dial (angle = cluster, radius = ring). A curated seed list keeps staples
+like `litellm` on the radar even when they aren't spiking this week.
 
 ## Quickstart
 
@@ -44,9 +53,17 @@ apps/web   Next.js 16 · React Three Fiber · Tailwind
 db         Postgres 16 + pgvector
 ```
 
-Pipeline on every scan: GitHub Search API → upsert tools + momentum score →
-embed changed descriptions (`BAAI/bge-small-en-v1.5`, 384d) → UMAP to 3D →
-HDBSCAN clusters → c-TF-IDF labels → broadcast to browsers.
+Pipeline on every scan: seed + GitHub sources (composite, fault-isolated) → upsert
+tools + momentum score + adoption ring → embed changed descriptions
+(`BAAI/bge-small-en-v1.5`, 384d) → UMAP to 3D → HDBSCAN clusters → c-TF-IDF labels →
+broadcast to browsers.
+
+**Resilience.** The radar keeps serving its last-good landscape through upstream
+failures: the GitHub source retries transient errors with backoff, the composite
+source isolates any one source's outage, startup retries the database, and the
+scheduler never overlaps a slow scan. `GET /health` reports `status`,
+`last_successful_scan`, `tools_tracked` and a `degraded` flag; ingestion only
+upserts, so a failed scan can never blank the map.
 
 ## Configuration
 
