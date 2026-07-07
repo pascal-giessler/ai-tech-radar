@@ -23,7 +23,8 @@ def make_source(handler, token: str | None = None) -> GithubToolSource:
     client = httpx.Client(
         transport=httpx.MockTransport(handler), base_url="https://api.github.com"
     )
-    return GithubToolSource(token=token, client=client)
+    # no-op sleep keeps retry/backoff instant in tests
+    return GithubToolSource(token=token, client=client, sleep=lambda _: None)
 
 
 def test_parses_search_results_into_discovered_tools() -> None:
@@ -49,13 +50,45 @@ def test_dedups_repos_across_queries() -> None:
     assert len(full_names) == len(set(full_names)) == 1
 
 
-def test_survives_partial_query_failure() -> None:
+def test_retries_transient_failure_then_succeeds() -> None:
     calls = {"n": 0}
 
     def handler(request: httpx.Request) -> httpx.Response:
         calls["n"] += 1
         if calls["n"] == 1:
-            return httpx.Response(403, json={"message": "rate limited"})
+            return httpx.Response(503, json={"message": "unavailable"})
+        return httpx.Response(200, json={"items": [repo_item("acme/ok")]})
+
+    items = make_source(handler).fetch_trending()
+    assert any(i.name == "ok" for i in items)
+    assert calls["n"] >= 2  # the first attempt was retried
+
+
+def test_gives_up_query_after_max_attempts_without_crashing() -> None:
+    attempts = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        attempts["n"] += 1
+        return httpx.Response(503)
+
+    # every query fails permanently -> empty result, no exception, bounded attempts
+    source = GithubToolSource(
+        client=httpx.Client(transport=httpx.MockTransport(handler), base_url="https://api.github.com"),
+        sleep=lambda _: None,
+        max_attempts=3,
+    )
+    assert source.fetch_trending() == []
+    # 7 queries × 3 attempts each
+    assert attempts["n"] == 7 * 3
+
+
+def test_timeout_is_retried() -> None:
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise httpx.ConnectTimeout("slow")
         return httpx.Response(200, json={"items": [repo_item("acme/ok")]})
 
     items = make_source(handler).fetch_trending()

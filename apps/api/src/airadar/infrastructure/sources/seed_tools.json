@@ -1,0 +1,122 @@
+[
+  {
+    "owner": "BerriAI",
+    "name": "litellm",
+    "description": "Call 100+ LLM APIs using the OpenAI format — a unified proxy and gateway for language models.",
+    "topics": ["llm", "proxy", "gateway", "openai", "ai"],
+    "language": "Python",
+    "stars": 15000,
+    "url": "https://github.com/BerriAI/litellm",
+    "created_at": "2023-07-27T00:00:00Z"
+  },
+  {
+    "owner": "pmarsceill",
+    "name": "rtk",
+    "description": "Rust Token Killer — a token-optimizing CLI proxy that cuts LLM token usage on dev operations.",
+    "topics": ["tokens", "cli", "llm", "optimization", "rust"],
+    "language": "Rust",
+    "stars": 900,
+    "url": "https://github.com/pmarsceill/rtk",
+    "created_at": "2025-09-01T00:00:00Z"
+  },
+  {
+    "owner": "headroom-dev",
+    "name": "headroom",
+    "description": "Context compaction and token-budget management for LLM agents — keep more room for reasoning.",
+    "topics": ["tokens", "context", "llm", "agents", "optimization"],
+    "language": "TypeScript",
+    "stars": 1200,
+    "url": "https://github.com/headroom-dev/headroom",
+    "created_at": "2025-06-15T00:00:00Z"
+  },
+  {
+    "owner": "langfuse",
+    "name": "langfuse",
+    "description": "Open-source LLM engineering platform: observability, tracing, evals and prompt management.",
+    "topics": ["llmops", "observability", "tracing", "evals"],
+    "language": "TypeScript",
+    "stars": 9000,
+    "url": "https://github.com/langfuse/langfuse",
+    "created_at": "2023-05-18T00:00:00Z"
+  },
+  {
+    "owner": "Helicone",
+    "name": "helicone",
+    "description": "Observability and monitoring proxy for LLM applications — logging, caching and cost tracking.",
+    "topics": ["llmops", "observability", "proxy", "monitoring"],
+    "language": "TypeScript",
+    "stars": 3500,
+    "url": "https://github.com/Helicone/helicone",
+    "created_at": "2023-01-20T00:00:00Z"
+  },
+  {
+    "owner": "run-llama",
+    "name": "llama_index",
+    "description": "Data framework for building RAG and agent applications over your own data.",
+    "topics": ["rag", "llm", "retrieval", "agents"],
+    "language": "Python",
+    "stars": 38000,
+    "url": "https://github.com/run-llama/llama_index",
+    "created_at": "2022-11-02T00:00:00Z"
+  },
+  {
+    "owner": "langchain-ai",
+    "name": "langchain",
+    "description": "Framework for developing applications powered by language models — chains, agents and tools.",
+    "topics": ["llm", "agents", "framework", "rag"],
+    "language": "Python",
+    "stars": 95000,
+    "url": "https://github.com/langchain-ai/langchain",
+    "created_at": "2022-10-17T00:00:00Z"
+  },
+  {
+    "owner": "qdrant",
+    "name": "qdrant",
+    "description": "High-performance vector database and similarity search engine for AI applications.",
+    "topics": ["vector-database", "embeddings", "search", "rag"],
+    "language": "Rust",
+    "stars": 21000,
+    "url": "https://github.com/qdrant/qdrant",
+    "created_at": "2020-05-30T00:00:00Z"
+  },
+  {
+    "owner": "modelcontextprotocol",
+    "name": "servers",
+    "description": "Reference Model Context Protocol servers — connect agents to tools and data sources.",
+    "topics": ["mcp", "agents", "tools", "protocol"],
+    "language": "TypeScript",
+    "stars": 12000,
+    "url": "https://github.com/modelcontextprotocol/servers",
+    "created_at": "2024-11-19T00:00:00Z"
+  },
+  {
+    "owner": "vllm-project",
+    "name": "vllm",
+    "description": "High-throughput, memory-efficient inference and serving engine for LLMs.",
+    "topics": ["inference", "serving", "llm", "performance"],
+    "language": "Python",
+    "stars": 34000,
+    "url": "https://github.com/vllm-project/vllm",
+    "created_at": "2023-02-09T00:00:00Z"
+  },
+  {
+    "owner": "Portkey-AI",
+    "name": "gateway",
+    "description": "Blazing-fast AI gateway routing to 250+ LLMs with fallbacks, retries and observability.",
+    "topics": ["gateway", "proxy", "llm", "llmops"],
+    "language": "TypeScript",
+    "stars": 6500,
+    "url": "https://github.com/Portkey-AI/gateway",
+    "created_at": "2023-08-24T00:00:00Z"
+  },
+  {
+    "owner": "BuilderIO",
+    "name": "micro-agent",
+    "description": "An AI agent that writes and fixes code for you, guided by your tests.",
+    "topics": ["agents", "codegen", "developer-tools"],
+    "language": "TypeScript",
+    "stars": 4200,
+    "url": "https://github.com/BuilderIO/micro-agent",
+    "created_at": "2024-05-30T00:00:00Z"
+  }
+]

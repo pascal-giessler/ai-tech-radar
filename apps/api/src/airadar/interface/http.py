@@ -1,9 +1,11 @@
 import json
+from datetime import UTC, datetime
 
 from fastapi import FastAPI, HTTPException, Query
 from sse_starlette.sse import EventSourceResponse
 
 from airadar.application.queries import tool_summary
+from airadar.domain.model.adoption import AdoptionRing
 from airadar.interface.container import Container
 
 
@@ -12,7 +14,19 @@ def create_app(container: Container, lifespan=None) -> FastAPI:
 
     @app.get("/health")
     def health() -> dict:
-        return {"status": "ok"}
+        # Liveness is always ok if we're answering; readiness/freshness is in the body.
+        return container.status.as_dict(datetime.now(UTC))
+
+    @app.get("/api/rings")
+    def rings() -> list[dict]:
+        counts: dict[str, int] = {r.slug: 0 for r in AdoptionRing.ordered()}
+        for tool in container.tools.list_all():
+            if tool.ring is not None:
+                counts[tool.ring.slug] += 1
+        return [
+            {"slug": r.slug, "label": r.label, "order": r.order, "count": counts[r.slug]}
+            for r in AdoptionRing.ordered()
+        ]
 
     @app.get("/api/landscape")
     def landscape() -> dict:

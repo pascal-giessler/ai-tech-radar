@@ -31,6 +31,7 @@ tools_table = Table(
     Column("first_seen_at", DateTime(timezone=True), nullable=False),
     Column("last_updated_at", DateTime(timezone=True), nullable=False),
     Column("trend_score", Float, nullable=False, default=0.0),
+    Column("ring", String(16), nullable=True),
     Column("pos_x", Float, nullable=True),
     Column("pos_y", Float, nullable=True),
     Column("pos_z", Float, nullable=True),

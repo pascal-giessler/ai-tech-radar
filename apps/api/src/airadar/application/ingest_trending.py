@@ -2,6 +2,7 @@ from airadar.application.dto import IngestReport
 from airadar.domain.model.repo_ref import RepoRef
 from airadar.domain.model.tool import Tool
 from airadar.domain.ports import Clock, ToolRepository, ToolSource
+from airadar.domain.services.adoption_classifier import AdoptionClassifier
 from airadar.domain.services.trend_scorer import TrendScorer
 
 SECONDS_PER_DAY = 86_400
@@ -9,12 +10,18 @@ SECONDS_PER_DAY = 86_400
 
 class IngestTrendingTools:
     def __init__(
-        self, source: ToolSource, tools: ToolRepository, scorer: TrendScorer, clock: Clock
+        self,
+        source: ToolSource,
+        tools: ToolRepository,
+        scorer: TrendScorer,
+        clock: Clock,
+        classifier: AdoptionClassifier | None = None,
     ) -> None:
         self._source = source
         self._tools = tools
         self._scorer = scorer
         self._clock = clock
+        self._classifier = classifier or AdoptionClassifier()
 
     def execute(self) -> IngestReport:
         now = self._clock.now()
@@ -52,6 +59,12 @@ class IngestTrendingTools:
                 gained = tool.stars_gained
             tool.trend_score = self._scorer.score(
                 stars=tool.stars, stars_gained=gained, age_days=age_days
+            )
+            tool.ring = self._classifier.classify(
+                stars=tool.stars,
+                stars_gained=gained,
+                trend_score=tool.trend_score,
+                age_days=age_days,
             )
             self._tools.upsert(tool)
 

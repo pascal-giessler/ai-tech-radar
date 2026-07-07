@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 
 import pytest
 
+from airadar.domain.model.adoption import AdoptionRing
 from airadar.domain.model.cluster import Cluster
 from airadar.domain.model.position import Position3D
 from airadar.domain.model.repo_ref import RepoRef
@@ -49,6 +50,7 @@ def make_tool(name: str = "rtk", score: float = 5.0, with_extras: bool = True) -
         trend_score=score,
     )
     if with_extras:
+        tool.ring = AdoptionRing.TRIAL
         tool.position = Position3D(1.0, 2.0, 3.0)
         tool.cluster_id = 1
         tool.embedding = [0.5] * 384
@@ -64,6 +66,7 @@ def test_upsert_and_get_round_trips_full_tool(repos) -> None:
     assert loaded is not None
     assert loaded.slug == "acme-rtk"
     assert loaded.stars == 500 and loaded.stars_prev == 400
+    assert loaded.ring == AdoptionRing.TRIAL
     assert loaded.position == Position3D(1.0, 2.0, 3.0)
     assert loaded.cluster_id == 1
     assert loaded.embedding is not None and len(loaded.embedding) == 384

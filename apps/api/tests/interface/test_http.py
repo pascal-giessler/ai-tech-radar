@@ -52,8 +52,27 @@ def client(world):
     return TestClient(create_app(world))
 
 
-def test_health(client) -> None:
-    assert client.get("/health").json() == {"status": "ok"}
+def test_health_reports_degraded_before_first_scan(client) -> None:
+    body = client.get("/health").json()
+    assert body["status"] == "degraded"
+    assert body["degraded"] is True
+    assert body["last_successful_scan"] is None
+
+
+def test_health_reports_ok_after_a_successful_scan(world) -> None:
+    from datetime import UTC, datetime
+
+    world.status.record_success(at=datetime.now(UTC), tools_tracked=3)
+    body = TestClient(create_app(world)).get("/health").json()
+    assert body["status"] == "ok"
+    assert body["degraded"] is False
+    assert body["tools_tracked"] == 3
+
+
+def test_rings_endpoint_returns_ordered_metadata(client) -> None:
+    rings = client.get("/api/rings").json()
+    assert [r["slug"] for r in rings] == ["adopt", "trial", "assess", "hold"]
+    assert all("count" in r and "label" in r for r in rings)
 
 
 def test_landscape_endpoint(client) -> None:
