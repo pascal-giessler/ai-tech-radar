@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { RingBadge } from "@/components/RingBadge";
+import { SiteHeader } from "@/components/SiteHeader";
 import { getClusters, getTool } from "@/lib/api";
 import { formatStars, scoreTier } from "@/lib/format";
 import { ringMeta } from "@/lib/rings";
@@ -71,7 +72,9 @@ export default async function ToolPage({ params }: Props) {
   };
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-5 pt-28 pb-24 sm:px-8">
+    <>
+      <SiteHeader />
+      <main className="mx-auto w-full max-w-3xl px-5 pt-12 pb-24 sm:px-8">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -160,6 +163,7 @@ export default async function ToolPage({ params }: Props) {
           open on GitHub ↗
         </a>
       </div>
-    </main>
+      </main>
+    </>
   );
 }
