@@ -62,6 +62,16 @@ def test_survives_partial_query_failure() -> None:
     assert any(i.name == "ok" for i in items)
 
 
+def test_control_characters_in_description_are_stripped() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200, json={"items": [repo_item("acme/messy", description="line1\x00\x08\nline2\t!")]}
+        )
+
+    desc = make_source(handler).fetch_trending()[0].description
+    assert desc == "line1 line2 !"
+
+
 def test_missing_description_becomes_empty_string() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"items": [repo_item("acme/bare", description=None)]})
