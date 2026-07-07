@@ -52,11 +52,12 @@ class IngestTrendingTools:
                 updated += 1
 
             age_days = (now - tool.repo_created_at).total_seconds() / SECONDS_PER_DAY
-            if tool.stars_prev is None:
-                # First sighting: no delta yet, estimate a week of the lifetime star rate.
-                gained = round(tool.stars / max(age_days, 1.0) * 7)
-            else:
-                gained = tool.stars_gained
+            # Momentum must not depend on scan cadence: a 30-min window shows ~0 real
+            # growth for almost every repo, which would collapse everything to "Hold".
+            # Use a lifetime weekly star rate as a floor, and let a genuine recent
+            # surge (real delta) rise above it.
+            lifetime_week = round(tool.stars / max(age_days, 1.0) * 7)
+            gained = max(tool.stars_gained, lifetime_week)
             tool.trend_score = self._scorer.score(
                 stars=tool.stars, stars_gained=gained, age_days=age_days
             )

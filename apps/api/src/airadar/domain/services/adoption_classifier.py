@@ -2,8 +2,8 @@ from airadar.domain.model.adoption import AdoptionRing
 
 # Opinionated thresholds — the product's point of view on the maturity × momentum
 # plane. Documented in the rings design addendum.
-MATURE_STARS = 15_000
-ESTABLISHED_STARS = 1_500
+MATURE_STARS = 50_000  # Adopt is selective: only proven, top-tier staples
+ESTABLISHED_STARS = 2_000
 WARM_SCORE = 18.0
 
 
