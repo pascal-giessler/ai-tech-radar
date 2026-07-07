@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+:root {
+  /* Pre-dawn sky over the observatory dome */
+  --ink-sky: #0a0e1a;
+  --dome: #11172b;
+  --dome-raised: #161e38;
+  --hairline: #232b45;
+  --phosphor: #ffb454; /* amber instrument glow */
+  --phosphor-dim: #b97f3a;
+  --sweep: #54e0c7; /* radar sweep teal — reserved for live data */
+  --starlight: #e6eaf5;
+  --muted: #8b94ad;
+}
+
+@theme inline {
+  --color-ink-sky: var(--ink-sky);
+  --color-dome: var(--dome);
+  --color-dome-raised: var(--dome-raised);
+  --color-hairline: var(--hairline);
+  --color-phosphor: var(--phosphor);
+  --color-phosphor-dim: var(--phosphor-dim);
+  --color-sweep: var(--sweep);
+  --color-starlight: var(--starlight);
+  --color-muted: var(--muted);
+  --font-display: var(--font-instrument-serif);
+  --font-sans: var(--font-space-grotesk);
+  --font-mono: var(--font-plex-mono);
+}
+
+body {
+  background: var(--ink-sky);
+  color: var(--starlight);
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--phosphor);
+  color: var(--ink-sky);
+}
+
+.font-display {
+  font-family: var(--font-instrument-serif), Georgia, serif;
+}
+
+/* Instrument eyebrow: spaced mono label above headings */
+.eyebrow {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--phosphor);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--phosphor);
+  outline-offset: 2px;
+}
+
+@keyframes pulse-sweep {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.live-dot {
+  animation: pulse-sweep 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-dot {
+    animation: none;
+  }
+}
