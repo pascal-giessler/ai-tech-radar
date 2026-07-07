@@ -1,0 +1,61 @@
+from airadar.application.ingest_trending import IngestTrendingTools
+from airadar.domain.services.trend_scorer import TrendScorer
+
+from tests.fakes import FakeToolSource, FixedClock, InMemoryToolRepository, discovered
+
+
+def make_use_case(items, repo=None, clock=None):
+    return IngestTrendingTools(
+        source=FakeToolSource(items),
+        tools=repo or InMemoryToolRepository(),
+        scorer=TrendScorer(),
+        clock=clock or FixedClock(),
+    )
+
+
+def test_new_tool_is_created_with_score() -> None:
+    repo = InMemoryToolRepository()
+    report = make_use_case([discovered(stars=800)], repo=repo).execute()
+
+    assert report.new == 1
+    assert report.updated == 0
+    tool = repo.get_by_slug("acme-rtk")
+    assert tool is not None
+    assert tool.stars == 800
+    assert tool.trend_score > 0
+
+
+def test_reingesting_same_ref_updates_instead_of_duplicating() -> None:
+    repo = InMemoryToolRepository()
+    make_use_case([discovered(stars=500)], repo=repo).execute()
+    report = make_use_case([discovered(stars=650)], repo=repo).execute()
+
+    assert report.new == 0
+    assert report.updated == 1
+    assert len(repo.list_all()) == 1
+    tool = repo.get_by_slug("acme-rtk")
+    assert tool.stars == 650
+    assert tool.stars_gained == 150
+
+
+def test_update_refreshes_description_and_topics() -> None:
+    repo = InMemoryToolRepository()
+    make_use_case([discovered()], repo=repo).execute()
+    make_use_case(
+        [discovered(description="New description", topics=["ai"])], repo=repo
+    ).execute()
+
+    tool = repo.get_by_slug("acme-rtk")
+    assert tool.description == "New description"
+    assert tool.topics == ["ai"]
+
+
+def test_report_counts_mixed_batch() -> None:
+    repo = InMemoryToolRepository()
+    make_use_case([discovered(name="one")], repo=repo).execute()
+    report = make_use_case(
+        [discovered(name="one", stars=600), discovered(name="two")], repo=repo
+    ).execute()
+
+    assert report.new == 1
+    assert report.updated == 1
