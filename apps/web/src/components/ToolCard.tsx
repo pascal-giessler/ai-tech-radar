@@ -3,6 +3,8 @@ import Link from "next/link";
 import { clusterHue, formatStars, scoreTier } from "@/lib/format";
 import type { Tool } from "@/lib/types";
 
+import { RingBadge } from "./RingBadge";
+
 const TIER_COPY: Record<string, string> = {
   blazing: "blazing",
   rising: "rising",
@@ -21,13 +23,14 @@ export function ToolCard({ tool }: { tool: Tool }) {
         style={{ background: `hsl(${hue} 70% 62%)` }}
       />
       <div className="min-w-0">
-        <h3 className="truncate">
+        <h3 className="flex items-center gap-2 truncate">
           <Link
             href={`/tools/${tool.slug}`}
             className="font-medium text-starlight transition-colors group-hover:text-phosphor"
           >
             {tool.owner}/<span className="font-semibold">{tool.name}</span>
           </Link>
+          <RingBadge ring={tool.ring} />
         </h3>
         <p className="mt-1 line-clamp-2 text-sm text-muted">{tool.description}</p>
       </div>

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { clusterHue } from "@/lib/format";
 import type { Cluster, Tool } from "@/lib/types";
 
+import { RingBadge } from "./RingBadge";
+
 /**
  * The crawlable text form of the landscape, rendered under the 3D canvas on `/`.
  * Search engines and agents read this; humans scroll into it for a linkable index.
@@ -29,7 +31,8 @@ export function LandscapeIndex({
       <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted">
         The same landscape the radar draws above, written down. Each territory is a
         semantic cluster discovered from what the tools actually do — not a hand-made
-        category.
+        category — and every tool carries a live adoption ring: <span className="text-phosphor">Adopt</span>,
+        Trial, Assess or Hold.
       </p>
       <div className="mt-12 space-y-14">
         {clusters.map((cluster) => {
@@ -57,15 +60,16 @@ export function LandscapeIndex({
               <ul className="mt-4 grid gap-x-8 sm:grid-cols-2">
                 {members.map((tool) => (
                   <li key={tool.slug} className="border-b border-hairline py-2.5">
-                    <Link
-                      href={`/tools/${tool.slug}`}
-                      className="text-sm text-starlight hover:text-phosphor"
-                    >
-                      {tool.owner}/{tool.name}
-                    </Link>
-                    <span className="ml-2 text-xs text-muted">
-                      {tool.description.slice(0, 72)}
+                    <span className="flex items-center gap-2">
+                      <Link
+                        href={`/tools/${tool.slug}`}
+                        className="text-sm text-starlight hover:text-phosphor"
+                      >
+                        {tool.owner}/{tool.name}
+                      </Link>
+                      <RingBadge ring={tool.ring} />
                     </span>
+                    <span className="text-xs text-muted">{tool.description.slice(0, 72)}</span>
                   </li>
                 ))}
               </ul>

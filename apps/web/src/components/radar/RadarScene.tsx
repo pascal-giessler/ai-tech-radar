@@ -3,7 +3,7 @@
 import { Canvas } from "@react-three/fiber";
 import { Stars } from "@react-three/drei";
 
-import type { Cluster, Tool } from "@/lib/types";
+import type { Cluster, Ring, Tool } from "@/lib/types";
 
 import { CameraRig } from "./CameraRig";
 import { ClusterLabels } from "./ClusterLabels";
@@ -13,11 +13,13 @@ import { ToolNodes } from "./ToolNodes";
 export function RadarScene({
   tools,
   clusters,
+  activeRings,
   selectedSlug,
   onSelect,
 }: {
   tools: Tool[];
   clusters: Cluster[];
+  activeRings: Set<Ring>;
   selectedSlug: string | null;
   onSelect: (slug: string | null) => void;
 }) {
@@ -28,6 +30,8 @@ export function RadarScene({
     <Canvas
       camera={{ position: [0, 14, 30], fov: 48 }}
       dpr={[1, 2]}
+      frameloop="always"
+      onCreated={({ gl }) => gl.setClearColor("#0a0e1a")}
       onPointerMissed={() => onSelect(null)}
     >
       <color attach="background" args={["#0a0e1a"]} />
@@ -41,7 +45,12 @@ export function RadarScene({
       <polarGridHelper args={[16, 12, 5, 48, 0x232b45, 0x1a2138]} position={[0, -8, 0]} />
       <RadarSweep radius={16} y={-7.95} />
 
-      <ToolNodes tools={placed} selectedSlug={selectedSlug} onSelect={onSelect} />
+      <ToolNodes
+        tools={placed}
+        activeRings={activeRings}
+        selectedSlug={selectedSlug}
+        onSelect={onSelect}
+      />
       <ClusterLabels clusters={clusters} />
       <CameraRig target={selected?.position ?? null} />
     </Canvas>

@@ -4,9 +4,11 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useLandscapeEvents } from "@/hooks/useLandscapeEvents";
-import type { LandscapeData, Tool } from "@/lib/types";
+import type { LandscapeData, Ring, Tool } from "@/lib/types";
 
 import { LiveStatus } from "./LiveStatus";
+import { RadarDial } from "./RadarDial";
+import { RingLegend, ViewToggle, type ViewMode } from "./RadarControls";
 import { SearchOverlay } from "./SearchOverlay";
 import { ToolPanel } from "./ToolPanel";
 
@@ -23,7 +25,18 @@ export function RadarView({ initial }: { initial: LandscapeData }) {
   const [data, setData] = useState(initial);
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
+  const [view, setView] = useState<ViewMode>("galaxy");
+  const [activeRings, setActiveRings] = useState<Set<Ring>>(new Set());
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const toggleRing = useCallback((ring: Ring) => {
+    setActiveRings((prev) => {
+      const next = new Set(prev);
+      if (next.has(ring)) next.delete(ring);
+      else next.add(ring);
+      return next;
+    });
+  }, []);
 
   const refetch = useCallback(async () => {
     try {
@@ -52,6 +65,14 @@ export function RadarView({ initial }: { initial: LandscapeData }) {
     refetch();
   }, [refetch]);
 
+  // Nudge the WebGL canvas to paint its first frame without waiting for a pointer
+  // event (R3F sizes on the first ResizeObserver tick).
+  useEffect(() => {
+    if (view !== "galaxy") return;
+    const id = setTimeout(() => window.dispatchEvent(new Event("resize")), 60);
+    return () => clearTimeout(id);
+  }, [view, data.tools.length]);
+
   useEffect(() => () => {
     if (flashTimer.current) clearTimeout(flashTimer.current);
   }, []);
@@ -63,14 +84,39 @@ export function RadarView({ initial }: { initial: LandscapeData }) {
 
   return (
     <div className="relative h-dvh w-full overflow-hidden">
-      <RadarScene
-        tools={data.tools}
-        clusters={data.clusters}
-        selectedSlug={selectedSlug}
-        onSelect={setSelectedSlug}
-      />
+      {view === "galaxy" ? (
+        <RadarScene
+          tools={data.tools}
+          clusters={data.clusters}
+          activeRings={activeRings}
+          selectedSlug={selectedSlug}
+          onSelect={setSelectedSlug}
+        />
+      ) : (
+        <div className="flex h-full items-center justify-center px-4 pt-16">
+          <RadarDial
+            tools={data.tools}
+            clusters={data.clusters}
+            activeRings={activeRings}
+            selectedSlug={selectedSlug}
+            onSelect={setSelectedSlug}
+          />
+        </div>
+      )}
+
       <SearchOverlay tools={data.tools} onSelect={setSelectedSlug} />
       <ToolPanel tool={selected} onClose={() => setSelectedSlug(null)} />
+
+      {/* controls: view toggle + ring legend/filter */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-16 z-30 flex flex-col items-center gap-3 px-4">
+        <div className="pointer-events-auto">
+          <RingLegend tools={data.tools} activeRings={activeRings} onToggle={toggleRing} />
+        </div>
+        <div className="pointer-events-auto">
+          <ViewToggle view={view} onChange={setView} />
+        </div>
+      </div>
+
       <LiveStatus toolCount={data.tools.length} generatedAt={data.generated_at} />
       {flash && (
         <div

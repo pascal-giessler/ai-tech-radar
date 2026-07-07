@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { clusterHue, formatStars, scoreTier } from "@/lib/format";
-import type { Tool } from "@/lib/types";
+import type { Ring, Tool } from "@/lib/types";
 
 const BASE_SCALE = 0.16;
 const SCORE_SCALE = 0.5;
@@ -17,26 +17,33 @@ function nodeScale(tool: Tool): number {
 
 export function ToolNodes({
   tools,
+  activeRings,
   selectedSlug,
   onSelect,
 }: {
   tools: Tool[];
+  activeRings: Set<Ring>;
   selectedSlug: string | null;
   onSelect: (slug: string) => void;
 }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const [hovered, setHovered] = useState<number | null>(null);
 
+  const isDimmed = (tool: Tool) =>
+    activeRings.size > 0 && !(tool.ring && activeRings.has(tool.ring as Ring));
+
   const colors = useMemo(() => {
     const array = new Float32Array(tools.length * 3);
     const color = new THREE.Color();
     tools.forEach((tool, i) => {
       const hue = tool.cluster_id !== null ? clusterHue(tool.cluster_id) : 220;
-      color.setHSL(hue / 360, 0.72, tool.cluster_id === 0 ? 0.32 : 0.52);
+      const dim = activeRings.size > 0 && !(tool.ring && activeRings.has(tool.ring as Ring));
+      const light = tool.cluster_id === 0 ? 0.32 : 0.52;
+      color.setHSL(hue / 360, dim ? 0.15 : 0.72, dim ? 0.22 : light);
       color.toArray(array, i * 3);
     });
     return array;
-  }, [tools]);
+  }, [tools, activeRings]);
 
   useEffect(() => {
     const mesh = meshRef.current;
@@ -56,6 +63,7 @@ export function ToolNodes({
       if (scoreTier(tool.trend_score) === "blazing") {
         scale *= 1 + 0.12 * Math.sin(time * 2.2 + i); // blazing tools breathe
       }
+      if (isDimmed(tool)) scale *= 0.4; // filtered-out rings recede
       if (tool.slug === selectedSlug || i === hovered) scale *= 1.6;
       matrix.compose(
         new THREE.Vector3(p.x, p.y, p.z),

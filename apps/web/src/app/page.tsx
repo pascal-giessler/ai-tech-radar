@@ -10,7 +10,8 @@ export default async function HomePage() {
   return (
     <main>
       <h1 className="sr-only">
-        AI Radar — a live semantic landscape of trending GitHub repos and AI developer tools
+        AI Radar — the living technology radar: trending GitHub repos and AI developer
+        tools placed by semantic cluster and adoption ring (Adopt, Trial, Assess, Hold)
       </h1>
       <RadarView initial={landscape} />
       <LandscapeIndex clusters={landscape.clusters} tools={landscape.tools} />

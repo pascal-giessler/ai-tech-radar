@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { RingBadge } from "@/components/RingBadge";
 import { getClusters, getTool } from "@/lib/api";
 import { formatStars, scoreTier } from "@/lib/format";
+import { ringMeta } from "@/lib/rings";
 
 export const revalidate = 60;
 
@@ -41,6 +43,15 @@ export default async function ToolPage({ params }: Props) {
         applicationCategory: "DeveloperApplication",
         operatingSystem: "Any",
         author: { "@type": "Organization", name: tool.owner },
+        additionalProperty: tool.ring
+          ? [
+              {
+                "@type": "PropertyValue",
+                name: "AI Radar adoption ring",
+                value: ringMeta(tool.ring).label,
+              },
+            ]
+          : undefined,
         aggregateRating: undefined,
         interactionStatistic: {
           "@type": "InteractionCounter",
@@ -79,6 +90,12 @@ export default async function ToolPage({ params }: Props) {
 
       <p className="eyebrow mt-10">{tool.owner}</p>
       <h1 className="font-display mt-2 text-6xl text-starlight">{tool.name}</h1>
+      <div className="mt-4 flex items-center gap-3">
+        <RingBadge ring={tool.ring} size="md" />
+        {tool.ring && (
+          <span className="text-sm text-muted">{ringMeta(tool.ring).blurb}</span>
+        )}
+      </div>
       <p className="mt-5 max-w-xl text-base leading-relaxed text-muted">{tool.description}</p>
 
       <dl className="mt-10 grid grid-cols-2 gap-px overflow-hidden rounded border border-hairline bg-hairline sm:grid-cols-4">
