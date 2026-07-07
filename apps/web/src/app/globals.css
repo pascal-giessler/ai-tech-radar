@@ -1,16 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  /* Pre-dawn sky over the observatory dome */
-  --ink-sky: #0a0e1a;
-  --dome: #11172b;
-  --dome-raised: #161e38;
-  --hairline: #232b45;
-  --phosphor: #ffb454; /* amber instrument glow */
-  --phosphor-dim: #b97f3a;
-  --sweep: #54e0c7; /* radar sweep teal — reserved for live data */
-  --starlight: #e6eaf5;
-  --muted: #8b94ad;
+  /* Cinematic HUD — deep blue-black scope, cyan sweep, mint live signal */
+  --ink-sky: #04070d;
+  --dome: #08101a; /* glass panel base (rgb 8 16 26) */
+  --dome-raised: #0a1220;
+  --hairline: rgba(116, 224, 255, 0.13);
+  --phosphor: #74e0ff; /* accent cyan */
+  --phosphor-dim: #4d6f86;
+  --sweep: #74e0ff; /* sweep + primary accent */
+  --live: #57e0a8;
+  --starlight: #e2f3ff;
+  --muted: #5f8299;
 }
 
 @theme inline {
@@ -21,34 +22,53 @@
   --color-phosphor: var(--phosphor);
   --color-phosphor-dim: var(--phosphor-dim);
   --color-sweep: var(--sweep);
+  --color-live: var(--live);
   --color-starlight: var(--starlight);
   --color-muted: var(--muted);
-  --font-display: var(--font-instrument-serif);
-  --font-sans: var(--font-space-grotesk);
+  --font-display: var(--font-plex-sans);
+  --font-sans: var(--font-plex-sans);
   --font-mono: var(--font-plex-mono);
 }
 
 body {
   background: var(--ink-sky);
   color: var(--starlight);
-  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-family: var(--font-plex-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-  background: var(--phosphor);
-  color: var(--ink-sky);
+  background: rgba(116, 224, 255, 0.26);
+  color: #f2fbff;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(116, 224, 255, 0.2);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(116, 224, 255, 0.34);
+  background-clip: padding-box;
 }
 
 .font-display {
-  font-family: var(--font-instrument-serif), Georgia, serif;
+  font-family: var(--font-plex-sans), system-ui, sans-serif;
+}
+.font-mono {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
 }
 
-/* Instrument eyebrow: spaced mono label above headings */
+/* Instrument eyebrow: spaced mono label */
 .eyebrow {
   font-family: var(--font-plex-mono), ui-monospace, monospace;
   font-size: 0.6875rem;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--phosphor);
 }
@@ -59,6 +79,43 @@ input:focus-visible {
   outline: 2px solid var(--phosphor);
   outline-offset: 2px;
 }
+input:focus {
+  outline: none;
+}
+::placeholder {
+  color: #4d6f86;
+}
+
+/* radar timeline scrubber */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  border-radius: 3px;
+  background: rgba(116, 224, 255, 0.18);
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #74e0ff;
+  border: 2px solid #04070d;
+  box-shadow: 0 0 12px rgba(116, 224, 255, 0.9);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #74e0ff;
+  border: 2px solid #04070d;
+  box-shadow: 0 0 12px rgba(116, 224, 255, 0.9);
+  cursor: pointer;
+}
 
 @keyframes pulse-sweep {
   0%,
@@ -66,11 +123,22 @@ input:focus-visible {
     opacity: 1;
   }
   50% {
-    opacity: 0.35;
+    opacity: 0.32;
   }
 }
 .live-dot {
-  animation: pulse-sweep 2.4s ease-in-out infinite;
+  animation: pulse-sweep 2.6s ease-in-out infinite;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
