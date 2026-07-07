@@ -45,8 +45,13 @@ class IngestTrendingTools:
                 updated += 1
 
             age_days = (now - tool.repo_created_at).total_seconds() / SECONDS_PER_DAY
+            if tool.stars_prev is None:
+                # First sighting: no delta yet, estimate a week of the lifetime star rate.
+                gained = round(tool.stars / max(age_days, 1.0) * 7)
+            else:
+                gained = tool.stars_gained
             tool.trend_score = self._scorer.score(
-                stars=tool.stars, stars_gained=tool.stars_gained, age_days=age_days
+                stars=tool.stars, stars_gained=gained, age_days=age_days
             )
             self._tools.upsert(tool)
 

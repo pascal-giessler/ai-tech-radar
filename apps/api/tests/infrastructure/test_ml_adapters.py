@@ -62,6 +62,15 @@ def test_clusterer_separates_obvious_blobs() -> None:
     assert max(second_half.count(x) for x in set(second_half)) >= 10
 
 
+def test_clusterer_separates_blobs_in_high_dimensions() -> None:
+    """Raw 384-dim embeddings must be reduced before HDBSCAN or most points read as noise."""
+    labels = HdbscanClusterer().assign(two_blobs(n_per=15, dim=384))
+    noise_share = labels.count(-1) / len(labels)
+    non_noise = {label for label in labels if label != -1}
+    assert len(non_noise) == 2
+    assert noise_share < 0.2
+
+
 def test_labeler_picks_distinguishing_terms() -> None:
     docs_by_cluster = {
         0: [
