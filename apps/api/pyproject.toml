@@ -32,7 +32,10 @@ where = ["src"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 asyncio_mode = "auto"
-markers = ["integration: requires a running postgres with pgvector"]
+markers = [
+    "integration: requires a running postgres with pgvector",
+    "slow: downloads ML models / long-running",
+]
 
 [tool.ruff]
 line-length = 100
