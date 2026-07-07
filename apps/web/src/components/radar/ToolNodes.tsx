@@ -32,7 +32,7 @@ export function ToolNodes({
     const color = new THREE.Color();
     tools.forEach((tool, i) => {
       const hue = tool.cluster_id !== null ? clusterHue(tool.cluster_id) : 220;
-      color.setHSL(hue / 360, 0.62, tool.cluster_id === 0 ? 0.38 : 0.6);
+      color.setHSL(hue / 360, 0.72, tool.cluster_id === 0 ? 0.32 : 0.52);
       color.toArray(array, i * 3);
     });
     return array;
@@ -92,8 +92,8 @@ export function ToolNodes({
         <meshStandardMaterial
           roughness={0.25}
           metalness={0.1}
-          emissive="#ffffff"
-          emissiveIntensity={0.35}
+          emissive="#aab6ff"
+          emissiveIntensity={0.22}
           toneMapped={false}
         />
       </instancedMesh>

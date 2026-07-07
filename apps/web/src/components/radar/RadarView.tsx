@@ -46,6 +46,12 @@ export function RadarView({ initial }: { initial: LandscapeData }) {
     ),
   );
 
+  // The SSR payload can be a stale ISR snapshot (or the pre-first-scan fallback);
+  // sync with the live API as soon as the client boots.
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
   useEffect(() => () => {
     if (flashTimer.current) clearTimeout(flashTimer.current);
   }, []);
