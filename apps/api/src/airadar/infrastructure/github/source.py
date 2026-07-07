@@ -23,7 +23,9 @@ def _clean_text(text: str) -> str:
 def _build_queries(now: datetime) -> list[str]:
     recent = (now - timedelta(days=21)).date().isoformat()
     pushed = (now - timedelta(days=7)).date().isoformat()
-    queries = [f"created:>{recent} stars:>50"]
+    # Keyword-scope the general query: an unscoped "new + popular" search drags
+    # unrelated repos onto a radar that is about dev/AI tooling.
+    queries = [f"ai OR llm OR agent OR mcp OR cli created:>{recent} stars:>50"]
     queries += [f"topic:{topic} pushed:>{pushed} stars:>100" for topic in TOPICS]
     return queries
 

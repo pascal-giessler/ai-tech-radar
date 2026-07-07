@@ -79,6 +79,19 @@ def test_missing_description_becomes_empty_string() -> None:
     assert make_source(handler).fetch_trending()[0].description == ""
 
 
+def test_general_query_is_keyword_scoped_to_dev_ai_tooling() -> None:
+    queries: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        queries.append(request.url.params["q"])
+        return httpx.Response(200, json={"items": []})
+
+    make_source(handler).fetch_trending()
+    general = [q for q in queries if "topic:" not in q]
+    assert general, "expected a general discovery query"
+    assert all("llm OR" in q or "ai OR" in q for q in general)
+
+
 def test_token_sets_authorization_header() -> None:
     seen: list[str | None] = []
 
