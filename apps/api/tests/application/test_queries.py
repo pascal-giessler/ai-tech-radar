@@ -46,8 +46,9 @@ def test_landscape_payload_shape() -> None:
     tool = payload["tools"][0]
     assert {
         "slug", "name", "owner", "description", "language", "topics",
-        "stars", "stars_gained", "trend_score", "url", "position", "cluster_id",
+        "stars", "stars_gained", "trend_score", "ring", "url", "position", "cluster_id",
     } <= tool.keys()
+    assert tool["ring"] in {"adopt", "trial", "assess", "hold"}
     assert {"x", "y", "z"} == tool["position"].keys()
     cluster = payload["clusters"][0]
     assert {"id", "label", "slug", "size", "centroid"} <= cluster.keys()
