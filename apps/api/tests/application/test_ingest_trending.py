@@ -1,4 +1,6 @@
 from airadar.application.ingest_trending import IngestTrendingTools
+from airadar.domain.model.adoption import AdoptionRing
+from airadar.domain.services.adoption_classifier import AdoptionClassifier
 from airadar.domain.services.trend_scorer import TrendScorer
 
 from tests.fakes import FakeToolSource, FixedClock, InMemoryToolRepository, discovered
@@ -9,11 +11,12 @@ def make_use_case(items, repo=None, clock=None):
         source=FakeToolSource(items),
         tools=repo or InMemoryToolRepository(),
         scorer=TrendScorer(),
+        classifier=AdoptionClassifier(),
         clock=clock or FixedClock(),
     )
 
 
-def test_new_tool_is_created_with_score() -> None:
+def test_new_tool_is_created_with_score_and_ring() -> None:
     repo = InMemoryToolRepository()
     report = make_use_case([discovered(stars=800)], repo=repo).execute()
 
@@ -23,6 +26,16 @@ def test_new_tool_is_created_with_score() -> None:
     assert tool is not None
     assert tool.stars == 800
     assert tool.trend_score > 0
+    assert tool.ring in set(AdoptionRing)
+
+
+def test_ring_reflects_maturity_and_momentum() -> None:
+    repo = InMemoryToolRepository()
+    make_use_case(
+        [discovered(name="giant", stars=90_000, repo_created_at=None)], repo=repo
+    ).execute()
+    # huge repo, first-scan momentum estimate keeps it warm -> Adopt
+    assert repo.get_by_slug("acme-giant").ring == AdoptionRing.ADOPT
 
 
 def test_reingesting_same_ref_updates_instead_of_duplicating() -> None:

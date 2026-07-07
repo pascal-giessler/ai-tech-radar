@@ -22,6 +22,7 @@ def tool_summary(tool: Tool) -> dict:
         "stars": tool.stars,
         "stars_gained": tool.stars_gained,
         "trend_score": round(tool.trend_score, 2),
+        "ring": tool.ring.slug if tool.ring else None,
         "url": tool.url,
         "position": _position_dict(tool),
         "cluster_id": tool.cluster_id,

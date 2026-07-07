@@ -3,6 +3,7 @@
 from sqlalchemy import Engine, delete, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
+from airadar.domain.model.adoption import AdoptionRing
 from airadar.domain.model.cluster import Cluster
 from airadar.domain.model.position import Position3D
 from airadar.domain.model.repo_ref import RepoRef
@@ -25,6 +26,7 @@ def _tool_to_row(tool: Tool) -> dict:
         "first_seen_at": tool.first_seen_at,
         "last_updated_at": tool.last_updated_at,
         "trend_score": tool.trend_score,
+        "ring": tool.ring.slug if tool.ring else None,
         "pos_x": tool.position.x if tool.position else None,
         "pos_y": tool.position.y if tool.position else None,
         "pos_z": tool.position.z if tool.position else None,
@@ -50,6 +52,7 @@ def _row_to_tool(row) -> Tool:
         first_seen_at=row.first_seen_at,
         last_updated_at=row.last_updated_at,
         trend_score=row.trend_score,
+        ring=AdoptionRing.from_slug(row.ring) if row.ring else None,
         position=position,
         cluster_id=row.cluster_id,
         embedding=list(row.embedding) if row.embedding is not None else None,

@@ -2,6 +2,7 @@ import hashlib
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from airadar.domain.model.adoption import AdoptionRing
 from airadar.domain.model.position import Position3D
 from airadar.domain.model.repo_ref import RepoRef
 
@@ -21,6 +22,7 @@ class Tool:
     first_seen_at: datetime
     last_updated_at: datetime
     trend_score: float = 0.0
+    ring: AdoptionRing | None = None
     position: Position3D | None = None
     cluster_id: int | None = None
     embedding: list[float] | None = None
