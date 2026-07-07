@@ -1,6 +1,7 @@
 """GitHub Search API adapter approximating "trending" via recent momentum queries."""
 
 import logging
+import re
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -11,6 +12,12 @@ logger = logging.getLogger(__name__)
 
 TOPICS = ["llm", "ai-agents", "developer-tools", "mcp", "rag", "llmops"]
 PER_PAGE = 30
+
+_CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f]+")
+
+
+def _clean_text(text: str) -> str:
+    return _CONTROL_CHARS.sub(" ", text).strip()
 
 
 def _build_queries(now: datetime) -> list[str]:
@@ -57,7 +64,7 @@ class GithubToolSource:
             return DiscoveredTool(
                 owner=item["owner"]["login"],
                 name=item["name"],
-                description=item.get("description") or "",
+                description=_clean_text(item.get("description") or ""),
                 topics=list(item.get("topics") or []),
                 language=item.get("language"),
                 stars=item.get("stargazers_count", 0),
