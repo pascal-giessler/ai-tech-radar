@@ -19,6 +19,7 @@ const data: LandscapeData = {
       stars: 500,
       stars_gained: 100,
       trend_score: 40,
+      ring: "assess",
       url: "https://github.com/acme/rtk",
       position: { x: 0, y: 0, z: 0 },
       cluster_id: 1,
@@ -33,6 +34,7 @@ const data: LandscapeData = {
       stars: 900,
       stars_gained: 300,
       trend_score: 70,
+      ring: "trial",
       url: "https://github.com/acme/headroom",
       position: { x: 1, y: 0, z: 0 },
       cluster_id: 1,
@@ -59,5 +61,10 @@ describe("buildLlmsTxt", () => {
 
   it("links every tool to its canonical page", () => {
     expect(text).toContain("https://airadar.dev/tools/acme-rtk");
+  });
+
+  it("annotates each tool with its adoption ring", () => {
+    expect(text).toContain("[trial]");
+    expect(text).toContain("[assess]");
   });
 });

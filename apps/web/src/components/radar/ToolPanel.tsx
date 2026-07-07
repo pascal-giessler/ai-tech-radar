@@ -5,6 +5,8 @@ import Link from "next/link";
 import { clusterHue, formatStars, scoreTier } from "@/lib/format";
 import type { Tool } from "@/lib/types";
 
+import { RingBadge } from "../RingBadge";
+
 export function ToolPanel({ tool, onClose }: { tool: Tool | null; onClose: () => void }) {
   if (!tool) return null;
   const hue = tool.cluster_id !== null ? clusterHue(tool.cluster_id) : 220;
@@ -21,6 +23,9 @@ export function ToolPanel({ tool, onClose }: { tool: Tool | null; onClose: () =>
             {tool.owner}
           </p>
           <h2 className="font-display mt-0.5 text-3xl text-starlight">{tool.name}</h2>
+          <div className="mt-2">
+            <RingBadge ring={tool.ring} size="md" />
+          </div>
         </div>
         <button
           onClick={onClose}
