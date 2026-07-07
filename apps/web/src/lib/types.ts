@@ -4,6 +4,8 @@ export interface Position3D {
   z: number;
 }
 
+export type Ring = "adopt" | "trial" | "assess" | "hold";
+
 export interface Tool {
   slug: string;
   name: string;
@@ -14,6 +16,7 @@ export interface Tool {
   stars: number;
   stars_gained: number;
   trend_score: number;
+  ring: Ring | null;
   url: string;
   position: Position3D | null;
   cluster_id: number | null;
