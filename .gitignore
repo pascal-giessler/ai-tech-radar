@@ -11,3 +11,7 @@ dist/
 *.egg-info/
 .DS_Store
 model-cache/
+
+# k8s secrets — never commit real values
+deploy/k8s/**/secret.yaml
+deploy/k8s/**/secrets.env

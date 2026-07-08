@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: airadar-config
+data:
+  INGEST_INTERVAL_MINUTES: "30"
+  MIN_TOOLS_FOR_CLUSTERING: "12"
+  # In-cluster service DNS. DATABASE_URL's password comes from the Secret and is
+  # assembled in each Deployment via env composition.
+  DB_HOST: "airadar-db"
+  DB_NAME: "airadar"
+  DB_USER: "airadar"
+  API_URL: "http://airadar-api:8000"
+  SITE_URL: "https://airadar.example.com"

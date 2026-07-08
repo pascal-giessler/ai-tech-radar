@@ -2,6 +2,7 @@ import json
 from datetime import UTC, datetime
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
 
 from airadar.application.queries import tool_summary
@@ -14,8 +15,16 @@ def create_app(container: Container, lifespan=None) -> FastAPI:
 
     @app.get("/health")
     def health() -> dict:
-        # Liveness is always ok if we're answering; readiness/freshness is in the body.
-        return container.status.as_dict(datetime.now(UTC))
+        # Liveness: always ok while the process serves. Must not depend on DB or scan
+        # freshness, or Kubernetes would restart healthy pods.
+        return {"status": "alive"}
+
+    @app.get("/health/ready")
+    def readiness() -> JSONResponse:
+        # Readiness: gate traffic on the database being reachable; report scan freshness.
+        reachable = container.db_ping()
+        body = {"ready": reachable, **container.status.as_dict(datetime.now(UTC))}
+        return JSONResponse(body, status_code=200 if reachable else 503)
 
     @app.get("/api/rings")
     def rings() -> list[dict]:

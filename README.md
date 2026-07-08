@@ -44,26 +44,56 @@ from the single compose file.
 ## Architecture
 
 ```
-apps/api   Python 3.12 · FastAPI · DDD/hexagonal
+apps/api   Python 3.12 · FastAPI · DDD/hexagonal  (one image, three entrypoints)
            domain/        pure model: Tool, Cluster, TrendScorer (zero deps)
            application/   use cases: ingest → embed → project → cluster → label
            infrastructure/ GitHub source · pgvector repos · fastembed · UMAP · HDBSCAN
+                          · pg NOTIFY/LISTEN event bus
            interface/     HTTP + SSE
-apps/web   Next.js 16 · React Three Fiber · Tailwind
+           main:app       → API  (read-only HTTP + SSE, scales horizontally)
+           worker         → the single writer (scheduled ingest → recompute → NOTIFY)
+           migrate        → one-shot schema migration
+apps/web   Next.js 16 · React · Tailwind
 db         Postgres 16 + pgvector
 ```
 
-Pipeline on every scan: seed + GitHub sources (composite, fault-isolated) → upsert
-tools + momentum score + adoption ring → embed changed descriptions
-(`BAAI/bge-small-en-v1.5`, 384d) → UMAP to 3D → HDBSCAN clusters → c-TF-IDF labels →
-broadcast to browsers.
+**Runtime split (scale-safe).** The scheduler is *not* in the API — it lives in a
+dedicated **worker** (run at replicas=1) so scaling the API never duplicates ingestion.
+Landscape events cross process/pod boundaries over **Postgres LISTEN/NOTIFY**: the
+worker publishes, every API replica listens and fans out to its own SSE clients — no
+extra message broker. Schema is applied once by the **migrate** command (a k8s Job / a
+compose one-shot), so replicas never race DDL.
 
-**Resilience.** The radar keeps serving its last-good landscape through upstream
-failures: the GitHub source retries transient errors with backoff, the composite
-source isolates any one source's outage, startup retries the database, and the
-scheduler never overlaps a slow scan. `GET /health` reports `status`,
-`last_successful_scan`, `tools_tracked` and a `degraded` flag; ingestion only
-upserts, so a failed scan can never blank the map.
+Pipeline on every scan (worker): seed + GitHub sources (composite, fault-isolated) →
+upsert tools + momentum score + adoption ring → embed changed descriptions
+(`BAAI/bge-small-en-v1.5`, 384d) → UMAP to 3D → HDBSCAN clusters → c-TF-IDF labels →
+`NOTIFY` → SSE.
+
+**Resilience.** Keeps serving the last-good landscape through upstream failures: GitHub
+retries with backoff, the composite source isolates any one source's outage, the worker
+retries the DB and never overlaps a slow scan, and the NOTIFY listener auto-reconnects.
+Health is split for orchestrators: **`GET /health`** is liveness (always `200` while
+serving — never fails on DB/scan state), **`GET /health/ready`** is readiness (`SELECT 1`
+→ `200`/`503`, plus scan freshness). Ingestion only upserts, so a failed scan can never
+blank the map.
+
+## Kubernetes
+
+Manifests live in `deploy/k8s` (Kustomize base + `overlays/prod`):
+
+```bash
+# build & push images, set them + your host in overlays/prod/kustomization.yaml
+cp deploy/k8s/base/secret.example.yaml deploy/k8s/base/secret.yaml   # fill in, keep out of git
+kubectl apply -f deploy/k8s/base/secret.yaml
+kubectl apply -k deploy/k8s/overlays/prod
+```
+
+You get: a pgvector `StatefulSet` (or point `DATABASE_URL` at managed Postgres and scale
+it to 0), a `migrate` Job, an **api** Deployment (HPA 2–6, PodDisruptionBudget, split
+liveness/readiness/startup probes), a single-replica **worker** (Recreate, model-cache
+PVC, heartbeat liveness), a **web** Deployment, and an Ingress with SSE-friendly
+buffering off. All pods run non-root with resource limits. Render locally with
+`kubectl kustomize deploy/k8s/overlays/prod`.
 
 ## Configuration
 

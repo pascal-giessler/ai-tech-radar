@@ -13,8 +13,34 @@ services:
       timeout: 3s
       retries: 12
 
+  # One-shot schema migration; api/worker wait for it to complete (no replica races).
+  migrate:
+    build: ./apps/api
+    command: ["python", "-m", "airadar.migrate"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://airadar:${POSTGRES_PASSWORD:-airadar}@db:5432/airadar
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  # Read-only HTTP + SSE; scales horizontally. Listens for worker events over NOTIFY.
   api:
     build: ./apps/api
+    environment:
+      DATABASE_URL: postgresql+psycopg://airadar:${POSTGRES_PASSWORD:-airadar}@db:5432/airadar
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+  # The single writer: scheduled ingest → recompute → NOTIFY. Keep at one replica.
+  worker:
+    build: ./apps/api
+    command: ["python", "-m", "airadar.worker"]
     environment:
       DATABASE_URL: postgresql+psycopg://airadar:${POSTGRES_PASSWORD:-airadar}@db:5432/airadar
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
@@ -24,8 +50,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      - "${API_PORT:-8000}:8000"
+      migrate:
+        condition: service_completed_successfully
 
   web:
     build: ./apps/web

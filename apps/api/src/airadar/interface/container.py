@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
@@ -56,4 +57,7 @@ class Container:
     clusters: ClusterRepository
     broadcaster: AsyncFanoutBroadcaster
     status: RadarStatus = field(default_factory=RadarStatus)
+    # Readiness check — returns True when the database is reachable. Defaults to a
+    # no-op "reachable" for fakes/tests; wired to a real SELECT 1 in production.
+    db_ping: Callable[[], bool] = lambda: True
     lifespan_tasks: list[Any] = field(default_factory=list)
