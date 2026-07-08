@@ -1,0 +1,76 @@
+# Self-contained Postgres+pgvector. For production prefer a managed Postgres or an
+# operator (CloudNativePG etc.): point DATABASE_URL at it and scale this to 0 replicas.
+apiVersion: v1
+kind: Service
+metadata:
+  name: airadar-db
+  labels:
+    app.kubernetes.io/name: airadar
+    app.kubernetes.io/component: db
+spec:
+  clusterIP: None # headless, for the StatefulSet
+  selector:
+    app.kubernetes.io/name: airadar
+    app.kubernetes.io/component: db
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: airadar-db
+  labels:
+    app.kubernetes.io/name: airadar
+    app.kubernetes.io/component: db
+spec:
+  serviceName: airadar-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: airadar
+      app.kubernetes.io/component: db
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: airadar
+        app.kubernetes.io/component: db
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: pgvector/pgvector:pg16
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              valueFrom: { configMapKeyRef: { name: airadar-config, key: DB_USER } }
+            - name: POSTGRES_DB
+              valueFrom: { configMapKeyRef: { name: airadar-config, key: DB_NAME } }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: airadar-secrets, key: POSTGRES_PASSWORD } }
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "airadar", "-d", "airadar"] }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec: { command: ["pg_isready", "-U", "airadar", "-d", "airadar"] }
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          resources:
+            requests: { cpu: "100m", memory: "256Mi" }
+            limits: { cpu: "1", memory: "1Gi" }
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
