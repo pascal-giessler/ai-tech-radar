@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: airadar
+
+commonLabels:
+  app.kubernetes.io/part-of: airadar
+
+# NOTE: airadar-secrets is NOT included here. Provide it out-of-band:
+#   cp secret.example.yaml secret.yaml && edit && kubectl apply -f secret.yaml
+# or via sealed-secrets / external-secrets / SOPS. The prod overlay shows a
+# secretGenerator alternative.
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - postgres.yaml
+  - migrate-job.yaml
+  - api.yaml
+  - worker.yaml
+  - web.yaml
+  - ingress.yaml
+
+images:
+  - name: airadar-api
+    newName: airadar-api
+    newTag: latest
+  - name: airadar-web
+    newName: airadar-web
+    newTag: latest

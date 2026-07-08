@@ -52,19 +52,35 @@ def client(world):
     return TestClient(create_app(world))
 
 
-def test_health_reports_degraded_before_first_scan(client) -> None:
-    body = client.get("/health").json()
-    assert body["status"] == "degraded"
-    assert body["degraded"] is True
-    assert body["last_successful_scan"] is None
+def test_liveness_is_always_ok(client) -> None:
+    # Liveness must never fail on degraded/DB state, or k8s would kill healthy pods.
+    res = client.get("/health")
+    assert res.status_code == 200
+    assert res.json() == {"status": "alive"}
 
 
-def test_health_reports_ok_after_a_successful_scan(world) -> None:
+def test_readiness_ok_when_db_reachable(world) -> None:
+    world.db_ping = lambda: True
+    res = TestClient(create_app(world)).get("/health/ready")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["ready"] is True
+    assert "tools_tracked" in body
+
+
+def test_readiness_503_when_db_unreachable(world) -> None:
+    world.db_ping = lambda: False
+    res = TestClient(create_app(world)).get("/health/ready")
+    assert res.status_code == 503
+    assert res.json()["ready"] is False
+
+
+def test_readiness_reports_scan_freshness(world) -> None:
     from datetime import UTC, datetime
 
+    world.db_ping = lambda: True
     world.status.record_success(at=datetime.now(UTC), tools_tracked=3)
-    body = TestClient(create_app(world)).get("/health").json()
-    assert body["status"] == "ok"
+    body = TestClient(create_app(world)).get("/health/ready").json()
     assert body["degraded"] is False
     assert body["tools_tracked"] == 3
 
