@@ -14,6 +14,21 @@ def make_engine(url: str) -> Engine:
     return create_engine(url, pool_pre_ping=True)
 
 
+class DatabasePing:
+    """Readiness probe: is the database reachable right now?"""
+
+    def __init__(self, engine: Engine) -> None:
+        self._engine = engine
+
+    def __call__(self) -> bool:
+        try:
+            with self._engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            return True
+        except Exception:
+            return False
+
+
 def init_db(engine: Engine) -> None:
     with engine.begin() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
