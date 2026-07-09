@@ -25,6 +25,7 @@ import {
 import { ringReason } from "@/lib/explain";
 import type { Ring } from "@/lib/types";
 
+import { LanguageMix, RingDistribution, StatStrip } from "./Insights";
 import { ActivityBars, RingPill } from "./signals";
 
 function dominantRing(nodes: ScopeNode[]): Ring | null {
@@ -57,6 +58,11 @@ function TrendQuadrant({ nodes, onPick }: { nodes: ScopeNode[]; onPick: (slug: s
         <span style={{ color: RING_COLOR.trial }}>Trial</span> → <span style={{ color: RING_COLOR.adopt }}>Adopt</span>{" "}
         at 2k and 50k stars.
       </p>
+      <div className="mb-3 flex items-center gap-2 font-mono text-[10px] text-[#5f8299]">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#6b8aa2]" />
+        <span className="inline-block h-3 w-3 rounded-full bg-[#6b8aa2]" />
+        <span>dot size = stars gained in the last 30 days (bigger = growing faster)</span>
+      </div>
 
       <div className="flex gap-3">
         {/* y-axis caption */}
@@ -279,7 +285,12 @@ export function OverviewView({
   return (
     <div className="absolute inset-0 overflow-auto">
       <div className="mx-auto flex max-w-[1180px] flex-col gap-5 px-7 pb-14 pt-[22px]">
+        <StatStrip nodes={nodes} clusterCount={clusters.length} />
         <TrendQuadrant nodes={nodes} onPick={onPick} />
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <RingDistribution nodes={nodes} />
+          <LanguageMix nodes={nodes} />
+        </div>
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.4fr_1fr]">
           <ClusterStrip clusters={clusters} nodes={nodes} onOpenCluster={onOpenCluster} />
           <TopMovers nodes={nodes} onPick={onPick} />
