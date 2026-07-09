@@ -20,6 +20,7 @@ function tool(over: Partial<Tool> = {}): Tool {
     url: "https://github.com/acme/widget",
     position: { x: 0, y: 0, z: 0 },
     cluster_id: 1,
+    first_seen_at: "2026-01-01T00:00:00+00:00",
     ...over,
   };
 }

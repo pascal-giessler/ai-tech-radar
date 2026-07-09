@@ -25,7 +25,7 @@ import {
 import { ringReason } from "@/lib/explain";
 import type { Ring } from "@/lib/types";
 
-import { LanguageMix, RingDistribution, StatStrip } from "./Insights";
+import { InsightsSection } from "./Insights";
 import { ActivityBars, RingPill } from "./signals";
 
 function dominantRing(nodes: ScopeNode[]): Ring | null {
@@ -285,12 +285,8 @@ export function OverviewView({
   return (
     <div className="absolute inset-0 overflow-auto">
       <div className="mx-auto flex max-w-[1180px] flex-col gap-5 px-7 pb-14 pt-[22px]">
-        <StatStrip nodes={nodes} clusterCount={clusters.length} />
         <TrendQuadrant nodes={nodes} onPick={onPick} />
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <RingDistribution nodes={nodes} />
-          <LanguageMix nodes={nodes} />
-        </div>
+        <InsightsSection nodes={nodes} clusters={clusters} onPick={onPick} onOpenCluster={onOpenCluster} />
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.4fr_1fr]">
           <ClusterStrip clusters={clusters} nodes={nodes} onOpenCluster={onOpenCluster} />
           <TopMovers nodes={nodes} onPick={onPick} />

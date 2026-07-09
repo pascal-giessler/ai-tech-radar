@@ -33,6 +33,7 @@ const data: LandscapeData = {
       url: "https://github.com/acme/rtk",
       position: { x: 0, y: 0, z: 0 },
       cluster_id: 1,
+      first_seen_at: "2026-01-01T00:00:00+00:00",
     },
     {
       slug: "acme-headroom",
@@ -50,6 +51,7 @@ const data: LandscapeData = {
       url: "https://github.com/acme/headroom",
       position: { x: 1, y: 0, z: 0 },
       cluster_id: 1,
+      first_seen_at: "2026-01-02T00:00:00+00:00",
     },
   ],
 };
