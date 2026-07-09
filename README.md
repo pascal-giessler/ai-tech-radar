@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/assets/logo.svg" alt="AI Radar logo" width="112" />
+
 # AI Radar
 
 **The living technology radar for AI dev tools.**
@@ -8,12 +10,20 @@ Trending GitHub repos and AI dev tools, scanned continuously and plotted on a li
 by **momentum** (range) and **semantic category** (bearing). The Thoughtworks Technology
 Radar's mental model, kept current by data instead of a twice-a-year PDF.
 
-<!-- Replace OWNER with your GitHub org/user once pushed -->
-[![CI](https://github.com/OWNER/airadar/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/airadar/actions/workflows/ci.yml)
+[![CI](https://github.com/pascal-giessler/ai-tech-radar/actions/workflows/ci.yml/badge.svg)](https://github.com/pascal-giessler/ai-tech-radar/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![Next.js](https://img.shields.io/badge/next.js-16-black)
 ![Postgres](https://img.shields.io/badge/postgres-16%20%2B%20pgvector-336791)
 ![Deploy](https://img.shields.io/badge/deploy-Docker%20%C2%B7%20Kubernetes-2496ed)
+
+<br/>
+
+<img src="docs/assets/radar.png" alt="The live radar scope — tools plotted by momentum (range) and semantic category (bearing), with a rotating sweep and 13-week timeline" width="820" />
+
+<br/><br/>
+
+<img src="docs/assets/overview.png" alt="The Overview dashboard — Trend Quadrant with adoption-ring zones, KPI drill-downs and insight panels" width="820" />
 
 </div>
 
@@ -30,6 +40,8 @@ Radar's mental model, kept current by data instead of a twice-a-year PDF.
 - [Configuration](#configuration)
 - [CI/CD](#cicd)
 - [Project layout](#project-layout)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## What it does
 
@@ -61,8 +73,8 @@ Radar's mental model, kept current by data instead of a twice-a-year PDF.
 and the web UI all run from the compose file.
 
 ```bash
-git clone https://github.com/OWNER/airadar.git
-cd airadar
+git clone https://github.com/pascal-giessler/ai-tech-radar.git
+cd ai-tech-radar
 
 cp .env.example .env        # optional: add a GITHUB_TOKEN for faster discovery
 docker compose up --build
@@ -241,7 +253,7 @@ and on pushes to **`main`** and **`dev`**:
 | **publish** | on push to `main`/`dev` only, after the above pass: builds and pushes the `api` and `web` images to GitHub Container Registry |
 
 Image tags: `dev` branch → `:dev`; `main` branch → `:latest` + `:sha-<short>`. Published to
-`ghcr.io/OWNER/airadar-api` and `ghcr.io/OWNER/airadar-web`. Point
+`ghcr.io/pascal-giessler/ai-tech-radar-api` and `ghcr.io/pascal-giessler/ai-tech-radar-web`. Point
 `deploy/k8s/overlays/prod/kustomization.yaml` at these.
 
 **Branching:** `dev` is integration, `main` is production — protect both so merges require
@@ -257,3 +269,15 @@ docker-compose.yml  local full stack: db · migrate · api · worker · web
 docs/superpowers    design specs and implementation plans
 .github/workflows   CI/CD pipeline
 ```
+
+## Contributing
+
+Contributions are welcome — the easiest first PR is a new
+[area preset](#fork-it-for-any-domain). See [CONTRIBUTING.md](CONTRIBUTING.md)
+for the dev setup, checks, and guidelines, and
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for community standards. Security
+issues: please follow [SECURITY.md](SECURITY.md).
+
+## License
+
+[MIT](LICENSE) © Pascal Giessler
