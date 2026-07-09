@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI Radar — the living technology radar for AI dev tools</title>
+<meta name="description" content="Trending GitHub repos and AI dev tools, clustered semantically and ranked by momentum on a live radar. Self-hosted with one docker compose up — forkable for any domain." />
+<link rel="icon" href="assets/logo.svg" />
+<meta property="og:title" content="AI Radar — the living technology radar for AI dev tools" />
+<meta property="og:description" content="Trending GitHub repos clustered semantically, ranked by momentum, plotted on a live radar. One docker compose up." />
+<meta property="og:image" content="https://pascal-giessler.github.io/ai-tech-radar/assets/overview.png" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #060c16; --bg2: #0a1626; --ink: #eaf7ff; --dim: #93b4c9; --faint: #5f8299;
+    --cyan: #74e0ff; --green: #57e0a8; --amber: #e6c46a;
+    --line: rgba(116, 224, 255, 0.13); --card: rgba(8, 16, 26, 0.55);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "IBM Plex Sans", system-ui, sans-serif; color: var(--ink);
+    background: radial-gradient(120% 90% at 50% 0%, var(--bg2) 0%, var(--bg) 55%, #03060c 100%) fixed;
+    line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: "IBM Plex Mono", monospace; }
+  a { color: var(--cyan); text-decoration: none; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  /* nav */
+  nav { display: flex; align-items: center; gap: 14px; padding: 22px 0; }
+  nav img { width: 38px; height: 38px; }
+  nav .name { font-weight: 600; letter-spacing: 0.04em; }
+  nav .name small { display: block; font-family: "IBM Plex Mono", monospace; font-size: 9px; letter-spacing: 0.24em; color: var(--faint); text-transform: uppercase; }
+  nav .gh { margin-left: auto; border: 1px solid var(--line); border-radius: 10px; padding: 8px 16px; font-size: 14px; color: var(--dim); transition: all 0.2s; }
+  nav .gh:hover { color: var(--ink); border-color: rgba(116,224,255,0.45); }
+
+  /* hero */
+  .hero { display: grid; grid-template-columns: 1.15fr 1fr; gap: 48px; align-items: center; padding: 64px 0 72px; }
+  @media (max-width: 880px) { .hero { grid-template-columns: 1fr; } }
+  .eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--cyan); }
+  h1 { font-size: clamp(34px, 5vw, 52px); line-height: 1.12; font-weight: 700; margin: 14px 0 18px; }
+  h1 em { font-style: normal; color: var(--cyan); }
+  .sub { font-size: 17px; color: var(--dim); max-width: 46ch; }
+  .ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+  .btn { border-radius: 12px; padding: 12px 22px; font-size: 15px; font-weight: 600; transition: transform 0.15s; }
+  .btn:active { transform: scale(0.98); }
+  .btn.primary { background: var(--cyan); color: #03121a; }
+  .btn.ghost { border: 1px solid rgba(116,224,255,0.3); color: var(--ink); }
+  .quick { margin-top: 22px; display: inline-flex; align-items: center; gap: 10px; border: 1px solid var(--line); background: rgba(4,9,16,0.6); border-radius: 10px; padding: 10px 16px; font-size: 13px; color: var(--dim); }
+  .quick b { color: var(--green); font-weight: 500; }
+
+  /* animated scope */
+  .scope { position: relative; aspect-ratio: 1; max-width: 440px; margin: 0 auto; width: 100%; }
+  .scope .ring { position: absolute; border: 1px solid rgba(116,224,255,0.22); border-radius: 50%; }
+  .scope .r1 { inset: 0; border-color: rgba(116,224,255,0.3); }
+  .scope .r2 { inset: 16%; } .scope .r3 { inset: 32%; border-color: rgba(116,224,255,0.14); }
+  .scope .cross-v { position: absolute; left: 50%; top: 2%; bottom: 2%; width: 1px; background: rgba(116,224,255,0.1); }
+  .scope .cross-h { position: absolute; top: 50%; left: 2%; right: 2%; height: 1px; background: rgba(116,224,255,0.1); }
+  .scope .sweep { position: absolute; inset: 0; border-radius: 50%; animation: spin 5.5s linear infinite;
+    background: conic-gradient(from 0deg, rgba(116,224,255,0.4), rgba(116,224,255,0.05) 55deg, transparent 100deg); }
+  .scope .center { position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; margin: -4.5px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 14px var(--cyan); }
+  .scope .dot { position: absolute; border-radius: 50%; animation: blip 5.5s ease-out infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes blip { 0%, 8% { opacity: 0.25; } 12% { opacity: 1; } 55%, 100% { opacity: 0.35; } }
+  @media (prefers-reduced-motion: reduce) { .scope .sweep { animation: none; opacity: 0.4; } .scope .dot { animation: none; opacity: 0.8; } }
+
+  /* sections */
+  section { padding: 56px 0; border-top: 1px solid rgba(116,224,255,0.07); }
+  h2 { font-size: 26px; font-weight: 650; margin-bottom: 8px; }
+  .lede { color: var(--dim); max-width: 62ch; margin-bottom: 34px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+  .card { border: 1px solid var(--line); background: var(--card); border-radius: 16px; padding: 22px; }
+  .card h3 { font-size: 15.5px; font-weight: 600; margin-bottom: 6px; }
+  .card p { font-size: 13.5px; color: var(--dim); }
+  .card .tag { font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--cyan); display: block; margin-bottom: 10px; }
+
+  .shot { border: 1px solid var(--line); border-radius: 18px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.5); margin-top: 26px; }
+  .shot img { width: 100%; display: block; }
+  .cap { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--faint); text-align: center; margin-top: 12px; letter-spacing: 0.08em; }
+
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; counter-reset: step; }
+  .step { border: 1px solid var(--line); background: var(--card); border-radius: 14px; padding: 16px; }
+  .step b { display: block; font-size: 13.5px; margin-bottom: 3px; }
+  .step span { font-size: 12px; color: var(--faint); }
+  .step::before { counter-increment: step; content: counter(step); display: inline-flex; width: 22px; height: 22px; align-items: center; justify-content: center; border: 1px solid rgba(116,224,255,0.35); border-radius: 50%; font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--cyan); margin-bottom: 10px; }
+
+  pre { background: #04090f; border: 1px solid var(--line); border-radius: 14px; padding: 22px; overflow-x: auto; font-family: "IBM Plex Mono", monospace; font-size: 13.5px; line-height: 1.7; color: var(--dim); }
+  pre b { color: var(--green); font-weight: 400; }
+  pre i { color: var(--faint); font-style: normal; }
+
+  footer { padding: 44px 0 60px; border-top: 1px solid rgba(116,224,255,0.07); display: flex; flex-wrap: wrap; gap: 18px; align-items: center; font-size: 13.5px; color: var(--faint); }
+  footer .spacer { flex: 1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav>
+    <img src="assets/logo.svg" alt="" />
+    <div class="name">AI RADAR<small>tech tracker</small></div>
+    <a class="gh" href="https://github.com/pascal-giessler/ai-tech-radar">★ Star on GitHub</a>
+  </nav>
+
+  <div class="hero">
+    <div>
+      <span class="eyebrow">open source · self-hosted · live</span>
+      <h1>See the AI ecosystem <em>move</em>.</h1>
+      <p class="sub">
+        A living technology radar for AI dev tools: trending GitHub repos, clustered by
+        <b>what they do</b> and ranked by <b>momentum</b> — re-scanned continuously and plotted
+        on a live scope. The Thoughtworks radar's mental model, kept current by data instead
+        of a twice-a-year PDF.
+      </p>
+      <div class="ctas">
+        <a class="btn primary" href="https://github.com/pascal-giessler/ai-tech-radar">Get the code</a>
+        <a class="btn ghost" href="#quickstart">Run it in 2 minutes</a>
+      </div>
+      <div class="quick mono"><b>$</b> docker compose up --build <span>→ that's the whole install</span></div>
+    </div>
+
+    <div class="scope" role="img" aria-label="Animated radar scope with a rotating sweep and blinking contacts">
+      <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div>
+      <div class="cross-v"></div><div class="cross-h"></div>
+      <div class="sweep"></div>
+      <div class="dot" style="left:64%;top:24%;width:12px;height:12px;background:var(--green);animation-delay:0.4s"></div>
+      <div class="dot" style="left:74%;top:58%;width:9px;height:9px;background:var(--cyan);animation-delay:1.6s"></div>
+      <div class="dot" style="left:36%;top:68%;width:8px;height:8px;background:var(--amber);animation-delay:3.1s"></div>
+      <div class="dot" style="left:28%;top:38%;width:7px;height:7px;background:var(--cyan);animation-delay:4.2s"></div>
+      <div class="center"></div>
+    </div>
+  </div>
+
+  <section>
+    <h2>Not another awesome-list.</h2>
+    <p class="lede">Every signal on the radar is computed live from real repository data — nothing is hand-curated, and every number explains itself in the UI.</p>
+    <div class="grid">
+      <div class="card"><span class="tag">semantic clustering</span><h3>Territories emerge from the data</h3><p>Tools are embedded by what they say they do, then grouped with HDBSCAN and labelled by c-TF-IDF. New categories appear on their own.</p></div>
+      <div class="card"><span class="tag">adoption rings</span><h3>Adopt · Trial · Assess · Hold</h3><p>Each tool gets a live ring from maturity × momentum — with the exact reason shown on hover, Thoughtworks-style.</p></div>
+      <div class="card"><span class="tag">live momentum</span><h3>A radar, not a report</h3><p>A rotating sweep, a 13-week timeline scrubber, zoom &amp; pan, and SSE updates the moment a scan lands.</p></div>
+      <div class="card"><span class="tag">configurable</span><h3>Fork it for any domain</h3><p>Swap the tracked area from the UI — AI, Rust, DevOps, or add your own GitHub topics. The radar re-ingests and swaps cleanly.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The scope.</h2>
+    <p class="lede">Tools plotted by momentum (range) and semantic category (bearing). Hot contacts glow; the top mover gets the reticle.</p>
+    <div class="shot"><img src="assets/radar.png" alt="AI Radar's live scope view: dozens of glowing tool contacts arranged by category bearing and momentum range, with a rotating sweep" loading="lazy" /></div>
+    <p class="cap">the live radar — 171 tools, 14 emergent clusters, one sweep</p>
+    <div class="shot"><img src="assets/overview.png" alt="The Overview dashboard: a Trend Quadrant with adoption-ring zones, KPI tiles and insight panels" loading="lazy" /></div>
+    <p class="cap">the overview — trend quadrant with real adoption-ring zones, drill-down KPIs, insight panels</p>
+  </section>
+
+  <section>
+    <h2>How the map is drawn.</h2>
+    <p class="lede">The whole pipeline is transparent — and explained inside the app, with the live parameters it actually ran with.</p>
+    <div class="steps">
+      <div class="step"><b>Ingest</b><span>trending repos + curated seed, every 30 min</span></div>
+      <div class="step"><b>Embed</b><span>bge-small vectors of each tool's self-description</span></div>
+      <div class="step"><b>Reduce</b><span>UMAP down to a density-friendly space</span></div>
+      <div class="step"><b>Cluster</b><span>HDBSCAN — no fixed number of categories</span></div>
+      <div class="step"><b>Label</b><span>c-TF-IDF names each territory</span></div>
+      <div class="step"><b>Rank</b><span>momentum × maturity → adoption ring</span></div>
+    </div>
+  </section>
+
+  <section id="quickstart">
+    <h2>Run it in 2 minutes.</h2>
+    <p class="lede">Postgres, API, worker and web UI all come up from one compose file. A GitHub token is optional — it just makes discovery faster.</p>
+    <pre><i># clone</i>
+git clone https://github.com/pascal-giessler/ai-tech-radar.git
+cd ai-tech-radar
+
+<i># optional: GITHUB_TOKEN raises the scan rate limit 60 → 5000 req/h</i>
+cp .env.example .env
+
+<i># the whole stack</i>
+<b>docker compose up --build</b>
+
+<i># → open http://localhost:3000 and watch the first sweep land</i></pre>
+    <div class="ctas" style="margin-top:26px">
+      <a class="btn primary" href="https://github.com/pascal-giessler/ai-tech-radar#getting-started">Full getting started</a>
+      <a class="btn ghost" href="https://github.com/pascal-giessler/ai-tech-radar/blob/main/CONTRIBUTING.md">Contribute an area preset</a>
+    </div>
+  </section>
+
+  <footer>
+    <span>MIT © Pascal Giessler</span>
+    <span class="spacer"></span>
+    <a href="https://github.com/pascal-giessler/ai-tech-radar">GitHub</a>
+    <a href="https://github.com/pascal-giessler/ai-tech-radar/issues">Issues</a>
+    <a href="https://github.com/pascal-giessler/ai-tech-radar/blob/main/SECURITY.md">Security</a>
+  </footer>
+
+</div>
+</body>
+</html>
