@@ -40,6 +40,7 @@ tools_table = Table(
     Column("embedded_fingerprint", String(64), nullable=True),
     Column("open_issues", Integer, nullable=False, default=0),
     Column("commit_activity", JSON, nullable=False, default=list),
+    Column("area", String(64), nullable=False, default="ai"),
 )
 
 clusters_table = Table(

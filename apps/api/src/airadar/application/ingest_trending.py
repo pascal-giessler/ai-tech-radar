@@ -1,4 +1,5 @@
 from airadar.application.dto import IngestReport
+from airadar.domain.model.radar_settings import DEFAULT_AREA_PRESET
 from airadar.domain.model.repo_ref import RepoRef
 from airadar.domain.model.tool import Tool
 from airadar.domain.ports import Clock, ToolRepository, ToolSource
@@ -23,7 +24,7 @@ class IngestTrendingTools:
         self._clock = clock
         self._classifier = classifier or AdoptionClassifier()
 
-    def execute(self) -> IngestReport:
+    def execute(self, area: str = DEFAULT_AREA_PRESET) -> IngestReport:
         now = self._clock.now()
         new = updated = 0
 
@@ -44,6 +45,7 @@ class IngestTrendingTools:
                     last_updated_at=now,
                     open_issues=item.open_issues,
                     commit_activity=list(item.commit_activity),
+                    area=area,
                 )
                 new += 1
             else:
@@ -53,6 +55,9 @@ class IngestTrendingTools:
                 tool.language = item.language
                 tool.open_issues = item.open_issues
                 tool.commit_activity = list(item.commit_activity)
+                # Re-tag to the active area so a tool that resurfaces under a new
+                # domain moves with it (and survives that area's prune).
+                tool.area = area
                 updated += 1
 
             age_days = (now - tool.repo_created_at).total_seconds() / SECONDS_PER_DAY

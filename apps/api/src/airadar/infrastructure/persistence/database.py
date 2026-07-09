@@ -10,6 +10,7 @@ _ADDITIVE_COLUMNS = {
         ("ring", "VARCHAR(16)"),
         ("open_issues", "INTEGER NOT NULL DEFAULT 0"),
         ("commit_activity", "JSON NOT NULL DEFAULT '[]'::json"),
+        ("area", "VARCHAR(64) NOT NULL DEFAULT 'ai'"),
     ],
     "clusters": [
         ("keywords", "JSON NOT NULL DEFAULT '[]'::json"),

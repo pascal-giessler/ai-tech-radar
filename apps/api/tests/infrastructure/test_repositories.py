@@ -96,6 +96,31 @@ def test_list_ranked_orders_by_trend_score(repos) -> None:
     assert names == ["high", "mid"]
 
 
+def test_area_round_trips_and_defaults_to_ai(repos) -> None:
+    tools, _ = repos
+    tools.upsert(make_tool(name="default"))  # make_tool leaves area unset
+    rust = make_tool(name="rusty")
+    rust.area = "rust"
+    tools.upsert(rust)
+
+    assert tools.get_by_slug("acme-default").area == "ai"
+    assert tools.get_by_slug("acme-rusty").area == "rust"
+
+
+def test_prune_area_deletes_only_other_areas(repos) -> None:
+    tools, _ = repos
+    ai = make_tool(name="ai-tool")  # area defaults to "ai"
+    rust = make_tool(name="rust-tool")
+    rust.area = "rust"
+    tools.upsert(ai)
+    tools.upsert(rust)
+
+    removed = tools.prune_area("rust")
+
+    assert removed == 1
+    assert {t.slug for t in tools.list_all()} == {"acme-rust-tool"}
+
+
 def test_replace_all_swaps_cluster_set(repos) -> None:
     _, clusters = repos
     clusters.replace_all([Cluster(0, "Uncharted", "uncharted", 3, Position3D(0, 0, 0))])

@@ -41,6 +41,7 @@ def _tool_to_row(tool: Tool) -> dict:
         "embedded_fingerprint": tool.embedded_fingerprint,
         "open_issues": tool.open_issues,
         "commit_activity": tool.commit_activity,
+        "area": tool.area,
     }
 
 
@@ -67,6 +68,7 @@ def _row_to_tool(row) -> Tool:
         embedded_fingerprint=row.embedded_fingerprint,
         open_issues=row.open_issues if row.open_issues is not None else 0,
         commit_activity=list(row.commit_activity or []),
+        area=row.area if row.area is not None else "ai",
     )
 
 
@@ -108,6 +110,15 @@ class SqlToolRepository:
                 .limit(limit)
             ).all()
         return [_row_to_tool(r) for r in rows]
+
+    def prune_area(self, keep: str) -> int:
+        """Delete tools not belonging to the active area, so an area switch swaps
+        the landscape cleanly. Returns the number removed."""
+        with self._engine.begin() as conn:
+            result = conn.execute(
+                delete(tools_table).where(tools_table.c.area != keep)
+            )
+        return result.rowcount or 0
 
 
 class SqlClusterRepository:

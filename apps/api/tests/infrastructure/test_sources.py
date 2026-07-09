@@ -65,6 +65,20 @@ def test_seed_source_loads_curated_stack() -> None:
     assert all(isinstance(i, DiscoveredTool) and i.url.startswith("http") for i in items)
 
 
+def test_seed_source_is_empty_when_area_has_no_seed() -> None:
+    source = SeedToolSource()
+    source.set_seed_file(None)  # e.g. switching to an area with no curated list
+    assert source.fetch_trending() == []
+
+
+def test_set_seed_file_swaps_the_curated_list() -> None:
+    source = SeedToolSource()
+    source.set_seed_file(None)
+    assert source.fetch_trending() == []
+    source.set_seed_file("seed_tools.json")  # switch back to AI
+    assert len(source.fetch_trending()) > 0
+
+
 def test_seed_source_accepts_custom_entries() -> None:
     entries = [
         {

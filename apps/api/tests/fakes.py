@@ -34,6 +34,12 @@ class InMemoryToolRepository:
         ranked = sorted(self._by_slug.values(), key=lambda t: t.trend_score, reverse=True)
         return ranked[:limit]
 
+    def prune_area(self, keep: str) -> int:
+        stale = [slug for slug, t in self._by_slug.items() if t.area != keep]
+        for slug in stale:
+            del self._by_slug[slug]
+        return len(stale)
+
 
 class InMemoryClusterRepository:
     def __init__(self) -> None:

@@ -74,7 +74,9 @@ class RefreshJob:
         recompute,
         clock: SystemClock,
         settings_repo,
+        tools,
         github_source: GithubToolSource,
+        seed_source: SeedToolSource,
         default_min_cluster_size: int,
         default_min_tools: int,
     ):
@@ -83,7 +85,9 @@ class RefreshJob:
         self._recompute = recompute
         self._clock = clock
         self._settings_repo = settings_repo
+        self._tools = tools
         self._github_source = github_source
+        self._seed_source = seed_source
         self._default_min_cluster_size = default_min_cluster_size
         self._default_min_tools = default_min_tools
         self._lock = threading.Lock()
@@ -107,15 +111,26 @@ class RefreshJob:
             else self._default_min_cluster_size
         )
         min_tools = row.min_tools if row.min_tools is not None else self._default_min_tools
+        area = row.area_preset
+        scoped = False
         try:
             preset = get_preset(row.area_preset)
             self._github_source.set_topics(preset.topics)
+            self._seed_source.set_seed_file(preset.seed_file)
+            area = preset.slug
+            scoped = True
             logger.info("active area preset: %s (%s topics)", preset.slug, len(preset.topics))
         except KeyError:
             logger.warning("unknown area preset %r; keeping current topics", row.area_preset)
 
-        report = self._ingest.execute()
+        report = self._ingest.execute(area=area)
         logger.info("ingest: %s new, %s updated", report.new, report.updated)
+        # Swap the landscape cleanly: drop tools from any previously-tracked area.
+        # Only when the preset resolved, so an unknown slug never wipes the map.
+        if scoped:
+            removed = self._tools.prune_area(area)
+            if removed:
+                logger.info("pruned %s tools outside area '%s'", removed, area)
         landscape = self._recompute.execute(
             min_cluster_size=min_cluster_size, min_tools=min_tools
         )
@@ -136,7 +151,8 @@ def build_refresh_job(settings: Settings) -> RefreshJob:
     settings_repo = SqlSettingsRepository(engine)
 
     github_source = GithubToolSource(token=settings.github_token)
-    source = CompositeToolSource([SeedToolSource(), github_source])
+    seed_source = SeedToolSource()
+    source = CompositeToolSource([seed_source, github_source])
     ingest = IngestTrendingTools(
         source=source,
         tools=tools,
@@ -161,7 +177,9 @@ def build_refresh_job(settings: Settings) -> RefreshJob:
         recompute=recompute,
         clock=SystemClock(),
         settings_repo=settings_repo,
+        tools=tools,
         github_source=github_source,
+        seed_source=seed_source,
         default_min_cluster_size=settings.min_cluster_size,
         default_min_tools=settings.min_tools_for_clustering,
     )

@@ -204,19 +204,24 @@ table.
 
 ### Fork it for any domain
 
-AI Radar ships pointed at AI/dev tooling, but the area is a swappable preset. Presets live
-in [`apps/api/src/airadar/infrastructure/sources/presets.json`](apps/api/src/airadar/infrastructure/sources/presets.json):
+AI Radar ships pointed at AI/dev tooling, but the area is a swappable preset — selectable
+from the **Radar area** control in the top bar (or the Clusters Configuration panel).
+Switching **cleanly swaps** the landscape: the worker re-ingests trending repos for the new
+domain and prunes the tools from the previous area, so a "Rust radar" shows Rust, not a mix.
+Presets live in
+[`apps/api/src/airadar/infrastructure/sources/presets.json`](apps/api/src/airadar/infrastructure/sources/presets.json):
 
 ```json
 { "slug": "rust", "title": "Rust Ecosystem",
   "topics": ["rust", "rust-lang", "cargo", "wasm", "tokio", "cli"],
-  "seed_file": "seed_tools.json" }
+  "seed_file": null }
 ```
 
-Add an entry with your own GitHub `topics` (and optionally a curated `seed_file`), rebuild,
-and pick it in the Configuration panel. Bundled presets: **AI & Dev Tools** (default),
-**Rust Ecosystem**, **Platform & DevOps**. That is the whole change needed to turn this into
-a "trending Rust radar" or a "trending DevOps radar".
+Add an entry with your own GitHub `topics` (and optionally a curated `seed_file`, or `null`
+for none — the seed is scoped per area so it never leaks across domains), rebuild, and pick
+it from the area selector. Bundled presets: **AI & Dev Tools** (default), **Rust Ecosystem**,
+**Platform & DevOps**. That is the whole change needed to turn this into a "trending Rust
+radar" or a "trending DevOps radar".
 
 ## CI/CD
 
