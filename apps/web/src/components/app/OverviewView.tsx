@@ -3,7 +3,9 @@
 import { useMemo, useState } from "react";
 
 import {
+  RING_BG,
   RING_COLOR,
+  RING_MEANING,
   clusterColor,
   formatStars,
   ringLabel,
@@ -11,17 +13,16 @@ import {
   type ScopeNode,
 } from "@/lib/cinematic";
 import {
-  SCORE_HOT,
   SCORE_WARM,
-  STAR_ESTABLISHED,
-  STAR_MATURE,
+  boundaryLines,
   bubbleRadius,
   jitter,
-  regionAnchors,
+  quadrantZones,
   starDomain,
   xFrac,
   yFrac,
 } from "@/lib/quadrant";
+import { ringReason } from "@/lib/explain";
 import type { Ring } from "@/lib/types";
 
 import { ActivityBars, RingPill } from "./signals";
@@ -40,32 +41,21 @@ function TrendQuadrant({ nodes, onPick }: { nodes: ScopeNode[]; onPick: (slug: s
   const domain = useMemo(() => starDomain(nodes.map((n) => n.stars)), [nodes]);
   const maxGain = useMemo(() => Math.max(1, ...nodes.map((n) => n.gained)), [nodes]);
 
-  const xEstablished = xFrac(STAR_ESTABLISHED, domain) * 100;
-  const xMature = xFrac(STAR_MATURE, domain) * 100;
-  const regions = regionAnchors(domain);
-
-  const vline = (leftPct: number, label: string) => (
-    <div key={label} className="pointer-events-none absolute bottom-0 top-0" style={{ left: `${leftPct}%` }}>
-      <div className="h-full w-px" style={{ background: "rgba(116,224,255,0.12)" }} />
-      <span className="absolute bottom-1 left-1 font-mono text-[9px] text-[#5f8299]">{label}</span>
-    </div>
-  );
-  const hline = (bottomPct: number, label: string) => (
-    <div key={label} className="pointer-events-none absolute inset-x-0" style={{ bottom: `${bottomPct}%` }}>
-      <div className="w-full" style={{ height: 1, background: "rgba(116,224,255,0.12)" }} />
-      <span className="absolute -top-3 right-1 font-mono text-[9px] text-[#5f8299]">{label}</span>
-    </div>
-  );
+  const zones = quadrantZones(domain);
+  const { warmY, establishedX, matureX } = boundaryLines(domain);
 
   return (
     <div className="rounded-2xl border border-[rgba(116,224,255,0.13)] bg-[rgba(8,16,26,0.55)] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur-[16px]">
       <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-[15px] font-semibold tracking-[0.01em] text-[#eaf7ff]">Trend Quadrant</h2>
-        <span className="font-mono text-[10.5px] text-[#5f8299]">momentum × maturity · dot colour = computed ring</span>
+        <span className="font-mono text-[10.5px] text-[#5f8299]">momentum × maturity · zones are the adoption rings</span>
       </div>
-      <p className="mb-4 max-w-[70ch] text-[12px] leading-[1.5] text-[#6f92a8]">
-        Every tracked tool placed by how proven it is (stars, log scale) against how fast it is moving (momentum
-        score). Region labels are indicative; each dot is coloured by its actual adoption ring.
+      <p className="mb-4 max-w-[76ch] text-[12px] leading-[1.5] text-[#6f92a8]">
+        Placed by maturity (stars, log) and momentum. The ring is decided by exactly these two axes, so a dot always
+        sits in its own coloured zone: below the momentum line everything is <span className="text-[#93b4c9]">Hold</span>;
+        above it, maturity splits <span style={{ color: RING_COLOR.assess }}>Assess</span> →{" "}
+        <span style={{ color: RING_COLOR.trial }}>Trial</span> → <span style={{ color: RING_COLOR.adopt }}>Adopt</span>{" "}
+        at 2k and 50k stars.
       </p>
 
       <div className="flex gap-3">
@@ -77,29 +67,50 @@ function TrendQuadrant({ nodes, onPick }: { nodes: ScopeNode[]; onPick: (slug: s
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="relative h-[clamp(320px,52vh,540px)] w-full rounded-xl border border-[rgba(116,224,255,0.08)] bg-[rgba(4,9,16,0.5)]">
-            {/* quadrant tint: top-right (adopt) subtly warmer-safe */}
-            {vline(xEstablished, "1.5k")}
-            {vline(xMature, "15k")}
-            {hline(yFrac(SCORE_WARM) * 100, "warm")}
-            {hline(yFrac(SCORE_HOT) * 100, "hot")}
-
-            {regions.map((r) => (
-              <span
-                key={r.label}
-                className="pointer-events-none absolute -translate-x-1/2 translate-y-1/2 font-mono text-[10px] uppercase tracking-[0.18em]"
-                style={{ left: `${r.x * 100}%`, bottom: `${r.y * 100}%`, color: RING_COLOR[r.ring], opacity: 0.5 }}
+          <div className="relative h-[clamp(320px,52vh,540px)] w-full overflow-hidden rounded-xl border border-[rgba(116,224,255,0.08)] bg-[rgba(4,9,16,0.5)]">
+            {/* ring zones — the classifier's exact boundaries, so dot colour = zone */}
+            {zones.map((z) => (
+              <div
+                key={z.label}
+                className="pointer-events-none absolute"
+                style={{
+                  left: `${z.x0 * 100}%`,
+                  bottom: `${z.y0 * 100}%`,
+                  width: `${(z.x1 - z.x0) * 100}%`,
+                  height: `${(z.y1 - z.y0) * 100}%`,
+                  background: RING_BG[z.ring],
+                }}
               >
-                {r.label}
-              </span>
+                <span
+                  className="absolute left-2 top-1.5 font-mono text-[10px] uppercase tracking-[0.18em]"
+                  style={{ color: RING_COLOR[z.ring], opacity: 0.65 }}
+                >
+                  {z.label}
+                </span>
+              </div>
+            ))}
+            {/* boundary lines: momentum (Hold) full width, maturity splits above it */}
+            <div className="pointer-events-none absolute inset-x-0" style={{ bottom: `${warmY * 100}%` }}>
+              <div className="w-full" style={{ height: 1, background: "rgba(116,224,255,0.18)" }} />
+              <span className="absolute -top-3 right-1 font-mono text-[9px] text-[#5f8299]">momentum {SCORE_WARM}</span>
+            </div>
+            {[
+              { x: establishedX, label: "2k" },
+              { x: matureX, label: "50k" },
+            ].map((v) => (
+              <div key={v.label} className="pointer-events-none absolute" style={{ left: `${v.x * 100}%`, bottom: `${warmY * 100}%`, top: 0 }}>
+                <div className="h-full w-px" style={{ background: "rgba(116,224,255,0.14)" }} />
+                <span className="absolute bottom-1 left-1 font-mono text-[9px] text-[#5f8299]">{v.label}</span>
+              </div>
             ))}
 
             {nodes.map((n) => {
               const r = bubbleRadius(n.gained, maxGain);
               const isHover = hover?.slug === n.slug;
-              // Stable jitter breaks up the pileup where momentum saturates at 100.
-              const left = (xFrac(n.stars, domain) + jitter(`${n.slug}x`, 0.006)) * 100;
-              const bottom = (yFrac(n.score) + jitter(n.slug, 0.02)) * 100;
+              // Vertical jitter only, so the saturation pileup spreads without pushing
+              // a dot across a vertical ring boundary (which would break colour = zone).
+              const left = xFrac(n.stars, domain) * 100;
+              const bottom = (yFrac(n.score) + jitter(n.slug, 0.018)) * 100;
               return (
                 <button
                   key={n.slug}
@@ -138,7 +149,10 @@ function TrendQuadrant({ nodes, onPick }: { nodes: ScopeNode[]; onPick: (slug: s
                 <div className="mt-1 flex items-center gap-2 font-mono text-[10.5px] text-[#93b4c9]">
                   <span style={{ color: hover.ring ? RING_COLOR[hover.ring] : "#6b8aa2" }}>{ringLabel(hover.ring)}</span>
                   <span>· ★ {formatStars(hover.stars)}</span>
-                  <span>· score {hover.score}</span>
+                  <span>· momentum {hover.score}</span>
+                </div>
+                <div className="mt-1 max-w-[220px] text-[10.5px] leading-[1.4] text-[#6f92a8]">
+                  {ringReason(hover.stars, hover.score)}
                 </div>
               </div>
             )}

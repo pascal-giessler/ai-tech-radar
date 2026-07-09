@@ -2,13 +2,19 @@ import type { Ring } from "./types";
 
 /**
  * Geometry for the Trend Quadrant: maturity (log stars, x) × momentum (score, y).
- * Threshold values mirror the backend AdoptionClassifier so the reference lines
- * line up with the real ring boundaries (see radar-rings addendum).
+ *
+ * These thresholds MUST match the backend AdoptionClassifier exactly — the ring is
+ * a pure function of (stars, trend_score), so the plot's zones ARE the ring
+ * boundaries and every dot's colour matches the zone it sits in:
+ *   momentum < WARM            -> Hold   (any maturity)
+ *   momentum >= WARM, stars <  ESTABLISHED -> Assess
+ *   momentum >= WARM, stars in [ESTABLISHED, MATURE) -> Trial
+ *   momentum >= WARM, stars >= MATURE      -> Adopt
+ * (see apps/api/.../domain/services/adoption_classifier.py)
  */
-export const STAR_ESTABLISHED = 1_500;
-export const STAR_MATURE = 15_000;
-export const SCORE_WARM = 18;
-export const SCORE_HOT = 45;
+export const STAR_ESTABLISHED = 2_000; // AdoptionClassifier.ESTABLISHED_STARS
+export const STAR_MATURE = 50_000; // AdoptionClassifier.MATURE_STARS
+export const SCORE_WARM = 18; // AdoptionClassifier.WARM_SCORE
 
 // Plot insets: dots are anchored by their centre, so map data into an inner band
 // rather than the full 0..1 frame — otherwise a max-momentum (score 100) or
@@ -63,22 +69,42 @@ export function bubbleRadius(gain: number, maxGain: number, min = 3, max = 15): 
   return min + (max - min) * Math.sqrt(Math.max(0, gain) / maxGain);
 }
 
-export interface QuadrantRegion {
+export interface QuadrantZone {
   ring: Ring;
   label: string;
-  /** Anchor in 0..1 fractional space (x from left, y from bottom). */
-  x: number;
-  y: number;
+  /** Rect in 0..1 fractional space (x from left, y from bottom). */
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
 }
 
-/** Indicative region anchors for labelling (dot colour remains the source of truth). */
-export function regionAnchors(domain: [number, number]): QuadrantRegion[] {
-  const xMature = xFrac(STAR_MATURE, domain);
-  const xEstablished = xFrac(STAR_ESTABLISHED, domain);
+/**
+ * The four ring zones, drawn from the exact classifier thresholds so a dot's
+ * colour always agrees with the zone it lands in. Hold is the full-width band
+ * below WARM momentum; above it, maturity splits Assess | Trial | Adopt.
+ */
+export function quadrantZones(domain: [number, number]): QuadrantZone[] {
+  const xEst = xFrac(STAR_ESTABLISHED, domain);
+  const xMat = xFrac(STAR_MATURE, domain);
+  const yWarm = yFrac(SCORE_WARM);
   return [
-    { ring: "adopt", label: "Adopt", x: (xMature + X_RIGHT) / 2, y: 0.8 },
-    { ring: "trial", label: "Trial", x: (xEstablished + xMature) / 2, y: 0.66 },
-    { ring: "assess", label: "Assess", x: (X_LEFT + xEstablished) / 2, y: 0.8 },
-    { ring: "hold", label: "Hold", x: 0.5, y: 0.1 },
+    { ring: "hold", label: "Hold", x0: 0, x1: 1, y0: 0, y1: yWarm },
+    { ring: "assess", label: "Assess", x0: 0, x1: xEst, y0: yWarm, y1: 1 },
+    { ring: "trial", label: "Trial", x0: xEst, x1: xMat, y0: yWarm, y1: 1 },
+    { ring: "adopt", label: "Adopt", x0: xMat, x1: 1, y0: yWarm, y1: 1 },
   ];
+}
+
+/** Fractional x/y of the ring boundary lines, for drawing reference gridlines. */
+export function boundaryLines(domain: [number, number]): {
+  warmY: number;
+  establishedX: number;
+  matureX: number;
+} {
+  return {
+    warmY: yFrac(SCORE_WARM),
+    establishedX: xFrac(STAR_ESTABLISHED, domain),
+    matureX: xFrac(STAR_MATURE, domain),
+  };
 }

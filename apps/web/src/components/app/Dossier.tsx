@@ -9,7 +9,9 @@ import {
   formatStars,
   type ScopeNode,
 } from "@/lib/cinematic";
+import { SCORE_EXPLAINER, ringReason } from "@/lib/explain";
 
+import { InfoTip } from "./InfoTip";
 import { ActivityBars, RingPill } from "./signals";
 
 function sparkPoints(node: ScopeNode, W: number, H: number, top: number) {
@@ -66,6 +68,7 @@ export function DetailPanel({
           {node.tier}
         </span>
       </div>
+      <p className="mt-2 font-mono text-[10.5px] text-[#6f92a8]">Why {node.ring ?? "unrated"}: {ringReason(node.stars, node.score)}</p>
 
       <p className="mt-3.5 text-sm leading-[1.58] text-[#93b4c9]">{node.description}</p>
 
@@ -83,7 +86,7 @@ export function DetailPanel({
           <dd className="mt-[5px] text-[#e2f3ff]">{formatStars(node.openIssues)}</dd>
         </div>
         <div>
-          <dt className="text-[#5f8299]">score</dt>
+          <dt className="inline-flex items-center gap-1 text-[#5f8299]">momentum <InfoTip text={SCORE_EXPLAINER} /></dt>
           <dd className="mt-[5px] text-[#e2f3ff]">{node.score}</dd>
         </div>
       </dl>

@@ -3,9 +3,11 @@
 import { useMemo } from "react";
 
 import { clusterColor, formatStars, type ScopeNode } from "@/lib/cinematic";
+import { RING_EXPLAINER, SCORE_EXPLAINER } from "@/lib/explain";
 import { filterNodes, type RecordFilters } from "@/lib/filters";
 
 import { FilterBar, type ClusterOption } from "./FilterBar";
+import { InfoTip } from "./InfoTip";
 import { ActivityBars, RingPill } from "./signals";
 
 export type SortKey = "name" | "stars" | "gained" | "score" | "issues" | "activity";
@@ -88,12 +90,18 @@ export function RecordsView({
               <tr className="bg-[rgba(116,224,255,0.04)]">
                 <th className={`${sortable} text-left pl-[18px]`} onClick={() => onSort("name")}>Contact {caret("name")}</th>
                 <th className={`${th} text-left`}>Category</th>
-                <th className={`${th} text-left`}>Ring</th>
+                <th className={`${th} text-left`}>
+                  <span className="inline-flex items-center gap-1">Ring <InfoTip text={RING_EXPLAINER} /></span>
+                </th>
                 <th className={`${sortable} text-right`} onClick={() => onSort("stars")}>Stars {caret("stars")}</th>
                 <th className={`${sortable} text-right`} onClick={() => onSort("gained")}>30-day {caret("gained")}</th>
                 <th className={`${sortable} text-right`} onClick={() => onSort("issues")}>Issues {caret("issues")}</th>
                 <th className={`${sortable} text-left`} onClick={() => onSort("activity")}>Commits/wk {caret("activity")}</th>
-                <th className={`${sortable} text-left pr-[18px]`} onClick={() => onSort("score")}>Score {caret("score")}</th>
+                <th className={`${sortable} text-left pr-[18px]`} onClick={() => onSort("score")}>
+                  <span className="inline-flex items-center gap-1">
+                    Score {caret("score")} <InfoTip text={SCORE_EXPLAINER} label="How the momentum score is calculated" />
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody>
