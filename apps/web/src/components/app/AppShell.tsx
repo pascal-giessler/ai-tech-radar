@@ -11,6 +11,7 @@ import type { LandscapeData } from "@/lib/types";
 import { usePersistentState } from "@/hooks/usePersistentState";
 
 import { AreaSelector } from "./AreaSelector";
+import { AreaSwitchOverlay } from "./AreaSwitchOverlay";
 import { ClustersView } from "./ClustersView";
 import { DetailPanel, FullDossier } from "./Dossier";
 import { OverviewView } from "./OverviewView";
@@ -82,6 +83,42 @@ export function AppShell({ initial }: { initial: LandscapeData }) {
 
   const visibility = useClusterVisibility();
   const settings = useSettings();
+
+  // Area-switch loading state. A switch (from the header selector or the config
+  // panel) leaves the old landscape stale for seconds while the worker re-ingests
+  // and re-clusters; show a loading overlay until the new landscape streams in.
+  const [pendingArea, setPendingArea] = useState<string | null>(null);
+  const prevAreaRef = useRef<string | null>(null);
+  const switchGenAtRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const area = settings.settings?.area_preset;
+    if (!area) return;
+    if (prevAreaRef.current === null) {
+      prevAreaRef.current = area; // first settings load — not a switch
+      return;
+    }
+    if (area !== prevAreaRef.current) {
+      prevAreaRef.current = area;
+      switchGenAtRef.current = data.generated_at; // the landscape we're leaving
+      const title = settings.settings?.presets.find((p) => p.slug === area)?.title ?? area;
+      setPendingArea(title);
+    }
+  }, [settings.settings, data.generated_at]);
+
+  // Clear the overlay once a freshly-recomputed landscape (new timestamp) lands.
+  useEffect(() => {
+    if (pendingArea && switchGenAtRef.current && data.generated_at !== switchGenAtRef.current) {
+      setPendingArea(null);
+    }
+  }, [data.generated_at, pendingArea]);
+
+  // Safety net: never trap the user if a scan stalls or fails.
+  useEffect(() => {
+    if (!pendingArea) return;
+    const t = setTimeout(() => setPendingArea(null), 90_000);
+    return () => clearTimeout(t);
+  }, [pendingArea]);
 
   const refetch = useCallback(async () => {
     try {
@@ -381,6 +418,7 @@ export function AppShell({ initial }: { initial: LandscapeData }) {
         </header>
 
         <div className="relative min-h-0 flex-1">
+          {pendingArea && <AreaSwitchOverlay area={pendingArea} />}
           {view === "overview" && (
             <OverviewView nodes={visibleModel.nodes} clusters={visibleModel.clusters} onPick={setDossierSlug} onOpenCluster={openClusterInRecords} />
           )}

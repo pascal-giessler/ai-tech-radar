@@ -141,8 +141,58 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
+/* Area-switch loading overlay */
+@keyframes radar-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes step-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.area-overlay {
+  animation: overlay-in 0.26s ease-out;
+}
+.area-scope-sweep {
+  background: conic-gradient(
+    from 0deg,
+    rgba(116, 224, 255, 0.32),
+    rgba(116, 224, 255, 0.03) 55deg,
+    transparent 120deg,
+    transparent 360deg
+  );
+  animation: radar-spin 2.6s linear infinite;
+}
+.area-step {
+  animation: step-pulse 1.4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .live-dot {
     animation: none;
+  }
+  .area-scope-sweep {
+    animation: none;
+    opacity: 0.5;
+  }
+  .area-step {
+    animation: none;
+    opacity: 0.7;
   }
 }

@@ -16,6 +16,7 @@ import {
   STAR_ESTABLISHED,
   STAR_MATURE,
   bubbleRadius,
+  jitter,
   regionAnchors,
   starDomain,
   xFrac,
@@ -80,8 +81,8 @@ function TrendQuadrant({ nodes, onPick }: { nodes: ScopeNode[]; onPick: (slug: s
             {/* quadrant tint: top-right (adopt) subtly warmer-safe */}
             {vline(xEstablished, "1.5k")}
             {vline(xMature, "15k")}
-            {hline(SCORE_WARM, "warm")}
-            {hline(SCORE_HOT, "hot")}
+            {hline(yFrac(SCORE_WARM) * 100, "warm")}
+            {hline(yFrac(SCORE_HOT) * 100, "hot")}
 
             {regions.map((r) => (
               <span
@@ -96,6 +97,9 @@ function TrendQuadrant({ nodes, onPick }: { nodes: ScopeNode[]; onPick: (slug: s
             {nodes.map((n) => {
               const r = bubbleRadius(n.gained, maxGain);
               const isHover = hover?.slug === n.slug;
+              // Stable jitter breaks up the pileup where momentum saturates at 100.
+              const left = (xFrac(n.stars, domain) + jitter(`${n.slug}x`, 0.006)) * 100;
+              const bottom = (yFrac(n.score) + jitter(n.slug, 0.02)) * 100;
               return (
                 <button
                   key={n.slug}
@@ -105,8 +109,8 @@ function TrendQuadrant({ nodes, onPick }: { nodes: ScopeNode[]; onPick: (slug: s
                   aria-label={`${n.owner}/${n.name}`}
                   className="absolute -translate-x-1/2 translate-y-1/2 rounded-full transition-transform duration-150"
                   style={{
-                    left: `${xFrac(n.stars, domain) * 100}%`,
-                    bottom: `${yFrac(n.score) * 100}%`,
+                    left: `${left}%`,
+                    bottom: `${bottom}%`,
                     width: r * 2,
                     height: r * 2,
                     background: n.ring ? RING_COLOR[n.ring] : "#6b8aa2",
