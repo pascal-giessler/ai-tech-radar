@@ -30,7 +30,9 @@ class Preset:
     slug: str
     title: str
     topics: list[str] = field(default_factory=list)
-    seed_file: str = "seed_tools.json"
+    # Curated seed file for this domain, or None when there's no curated list.
+    # Scoped per preset so one area's seed never leaks into another.
+    seed_file: str | None = None
 
 
 def _load_raw() -> list[dict]:
@@ -48,7 +50,7 @@ def load_presets() -> list[Preset]:
             slug=entry["slug"],
             title=entry["title"],
             topics=list(entry.get("topics", [])),
-            seed_file=entry.get("seed_file", "seed_tools.json"),
+            seed_file=entry.get("seed_file"),
         )
         for entry in _load_raw()
     ]

@@ -74,7 +74,8 @@ export function SettingsPanel({ controller }: { controller: SettingsController }
           })}
         </div>
         <div className="mt-2 text-[11px] text-[#4d6f86]">
-          Switching area re-ingests trending repos for that domain. Fork the radar for any topic by adding a preset.
+          Switching swaps the radar to that domain: it re-ingests trending repos and prunes the previous area. Fork
+          the radar for any topic by adding a preset.
         </div>
       </div>
 

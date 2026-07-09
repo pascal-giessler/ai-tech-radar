@@ -72,3 +72,35 @@ def test_report_counts_mixed_batch() -> None:
 
     assert report.new == 1
     assert report.updated == 1
+
+
+def test_execute_defaults_area_to_ai() -> None:
+    repo = InMemoryToolRepository()
+    make_use_case([discovered()], repo=repo).execute()
+    assert repo.get_by_slug("acme-rtk").area == "ai"
+
+
+def test_execute_tags_tools_with_active_area() -> None:
+    repo = InMemoryToolRepository()
+    make_use_case([discovered()], repo=repo).execute(area="rust")
+    assert repo.get_by_slug("acme-rtk").area == "rust"
+
+
+def test_resurfacing_tool_moves_to_new_area() -> None:
+    repo = InMemoryToolRepository()
+    make_use_case([discovered()], repo=repo).execute(area="ai")
+    make_use_case([discovered(stars=700)], repo=repo).execute(area="rust")
+    assert repo.get_by_slug("acme-rtk").area == "rust"
+
+
+def test_area_switch_prunes_previous_area() -> None:
+    """Ingest AI, then ingest a disjoint Rust batch and prune: only Rust remains."""
+    repo = InMemoryToolRepository()
+    make_use_case([discovered(name="ai-tool")], repo=repo).execute(area="ai")
+    make_use_case([discovered(name="rust-tool")], repo=repo).execute(area="rust")
+
+    removed = repo.prune_area("rust")
+
+    assert removed == 1
+    slugs = {t.slug for t in repo.list_all()}
+    assert slugs == {"acme-rust-tool"}

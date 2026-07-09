@@ -106,7 +106,8 @@ export function AreaSelector({ controller }: { controller: SettingsController })
               );
             })}
             <li className="mt-1 border-t border-[rgba(116,224,255,0.1)] px-2.5 pb-1 pt-2 text-[10.5px] leading-[1.45] text-[#4d6f86]">
-              Switching re-ingests trending repos for that domain. Add your own in the Clusters panel.
+              Swaps the radar to that domain — re-ingests and prunes the previous area. Add your own in the Clusters
+              panel.
             </li>
           </ul>
         </>

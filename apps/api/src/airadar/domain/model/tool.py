@@ -4,6 +4,7 @@ from datetime import datetime
 
 from airadar.domain.model.adoption import AdoptionRing
 from airadar.domain.model.position import Position3D
+from airadar.domain.model.radar_settings import DEFAULT_AREA_PRESET
 from airadar.domain.model.repo_ref import RepoRef
 
 
@@ -31,6 +32,9 @@ class Tool:
     # Weekly commit counts, most-recent-last, up to ~12 entries. Empty when the
     # GitHub stats endpoint is unavailable (202/rate-limit/no token) — never blocks.
     commit_activity: list[float] = field(default_factory=list)
+    # The radar area (preset slug) this tool was last ingested under. Lets an area
+    # switch cleanly swap the landscape: tools tagged with a different area are pruned.
+    area: str = DEFAULT_AREA_PRESET
 
     @property
     def slug(self) -> str:
