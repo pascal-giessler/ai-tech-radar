@@ -8,3 +8,4 @@ class Settings(BaseSettings):
     github_token: str | None = None
     ingest_interval_minutes: int = 30
     min_tools_for_clustering: int = 12
+    min_cluster_size: int = 4

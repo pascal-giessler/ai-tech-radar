@@ -42,6 +42,8 @@ class IngestTrendingTools:
                     repo_created_at=item.repo_created_at,
                     first_seen_at=now,
                     last_updated_at=now,
+                    open_issues=item.open_issues,
+                    commit_activity=list(item.commit_activity),
                 )
                 new += 1
             else:
@@ -49,6 +51,8 @@ class IngestTrendingTools:
                 tool.description = item.description
                 tool.topics = item.topics
                 tool.language = item.language
+                tool.open_issues = item.open_issues
+                tool.commit_activity = list(item.commit_activity)
                 updated += 1
 
             age_days = (now - tool.repo_created_at).total_seconds() / SECONDS_PER_DAY

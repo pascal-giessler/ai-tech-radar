@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 
 
@@ -12,9 +12,12 @@ class DiscoveredTool:
     stars: int
     url: str
     repo_created_at: datetime
+    open_issues: int = 0
+    commit_activity: list[int] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "topics", list(self.topics))
+        object.__setattr__(self, "commit_activity", list(self.commit_activity))
 
 
 @dataclass(frozen=True)

@@ -55,3 +55,15 @@ def test_fingerprint_changes_when_description_changes() -> None:
 
 def test_fingerprint_ignores_star_count() -> None:
     assert make_tool(stars=1).content_fingerprint() == make_tool(stars=99999).content_fingerprint()
+
+
+def test_activity_signals_default_to_empty() -> None:
+    tool = make_tool()
+    assert tool.open_issues == 0
+    assert tool.commit_activity == []
+    assert tool.commits_recent == 0
+
+
+def test_commits_recent_sums_the_activity_window() -> None:
+    tool = make_tool(commit_activity=[1.0, 2.0, 3.0, 4.0])
+    assert tool.commits_recent == 10

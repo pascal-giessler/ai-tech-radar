@@ -1,5 +1,5 @@
 import { formatStars } from "./format";
-import type { Cluster, Tool } from "./types";
+import type { Cluster, Ring, Tool } from "./types";
 
 /* ---------- tiers (momentum) ---------- */
 
@@ -22,6 +22,45 @@ export const TIER_BG: Record<CineTier, string> = {
   watch: "rgba(107,138,162,0.14)",
 };
 
+/* ---------- adoption rings (the recommendation axis) ---------- */
+
+export const RING_ORDER: Ring[] = ["adopt", "trial", "assess", "hold"];
+
+/** Display titles for the adoption rings. (`RING_LABEL` below is the older
+ *  momentum-tier ring geometry used by the radar canvas — kept distinct.) */
+export const RING_TITLE: Record<Ring, string> = {
+  adopt: "Adopt",
+  trial: "Trial",
+  assess: "Assess",
+  hold: "Hold",
+};
+
+/** Semantic, not decorative: green = safe default, amber = watch, slate = don't chase. */
+export const RING_COLOR: Record<Ring, string> = {
+  adopt: "oklch(0.82 0.13 158)",
+  trial: "oklch(0.82 0.13 210)",
+  assess: "oklch(0.85 0.12 85)",
+  hold: "oklch(0.72 0.045 255)",
+};
+
+export const RING_BG: Record<Ring, string> = {
+  adopt: "oklch(0.82 0.13 158 / 0.13)",
+  trial: "oklch(0.82 0.13 210 / 0.13)",
+  assess: "oklch(0.85 0.12 85 / 0.13)",
+  hold: "oklch(0.72 0.045 255 / 0.14)",
+};
+
+export const RING_MEANING: Record<Ring, string> = {
+  adopt: "Proven and still thriving — a safe default.",
+  trial: "Real traction — worth piloting.",
+  assess: "Emerging and unproven — worth watching.",
+  hold: "Cooling or stalled — don't chase.",
+};
+
+export function ringLabel(ring: Ring | null): string {
+  return ring ? RING_TITLE[ring] : "Unrated";
+}
+
 export const ACCENT = "#74e0ff";
 export const LIVE = "#57e0a8";
 export const RING_R = [0.42, 0.656, 0.821, 0.93];
@@ -38,6 +77,12 @@ export { formatStars };
 
 export function clusterHue(id: number): number {
   return ((id * 137.508) % 360 + 360) % 360;
+}
+/** Hue derived from the cluster SLUG, not its id. Cluster ids are reassigned on every
+ *  recompute (the repo deletes + re-inserts); the slug is stable, so colours stay put
+ *  as the landscape refreshes. Golden-angle spread keeps neighbours far apart. */
+export function hueForSlug(slug: string): number {
+  return ((hashSeed(slug) * 137.508) % 360 + 360) % 360;
 }
 export function clusterColor(hue: number, l = 0.78, c = 0.15, a?: number): string {
   return a == null ? `oklch(${l} ${c} ${hue})` : `oklch(${l} ${c} ${hue} / ${a})`;
@@ -74,6 +119,7 @@ export interface ScopeNode {
   owner: string;
   name: string;
   description: string;
+  language: string | null;
   topics: string[];
   url: string;
   cid: number;
@@ -90,6 +136,12 @@ export interface ScopeNode {
   hist: Hist[];
   tier: CineTier;
   ping: number;
+  /** The adoption ring computed by the backend (adopt/trial/assess/hold), or null. */
+  ring: Ring | null;
+  openIssues: number;
+  /** Real weekly commit counts, most-recent-last (up to ~12w); empty when unavailable. */
+  commitActivity: number[];
+  commitsRecent: number;
 }
 export interface ScopeCluster {
   id: number;
@@ -98,6 +150,8 @@ export interface ScopeCluster {
   hue: number;
   bearing: number;
   count: number;
+  keywords: string[];
+  description: string;
 }
 export interface ScopeModel {
   nodes: ScopeNode[];
@@ -163,40 +217,53 @@ export function buildModel(tools: Tool[], clusters: Cluster[]): ScopeModel {
     const rng = mulberry32(hashSeed(t.slug));
     const base = bearingById.get(cid) ?? 0;
     const score = Math.round(t.trend_score);
+    const clusterSlug = meta.get(cid)?.slug ?? "uncharted";
     const label = meta.get(cid)?.label ?? "uncharted";
     const pattern = PATTERNS[Math.floor(rng() * PATTERNS.length)];
+    const commitActivity = Array.isArray(t.commit_activity) ? t.commit_activity : [];
     return {
       slug: t.slug,
       owner: t.owner,
       name: t.name,
       description: t.description,
+      language: t.language,
       topics: t.topics,
       url: t.url,
       cid,
-      clusterSlug: meta.get(cid)?.slug ?? "uncharted",
+      clusterSlug,
       clusterLabel: label,
       score,
       stars: t.stars,
       gained: Math.max(0, t.stars_gained),
       bearing: base + (rng() - 0.5) * sector * 0.66,
       rjit: (rng() - 0.5) * 0.05,
-      hue: clusterHue(cid),
+      hue: hueForSlug(clusterSlug),
       hay: `${t.owner}/${t.name} ${t.description} ${t.topics.join(" ")}`.toLowerCase(),
       pattern,
       hist: buildHist(score, t.stars, pattern, rng),
       tier: cineTier(score),
       ping: -99,
+      ring: t.ring,
+      openIssues: t.open_issues ?? 0,
+      commitActivity,
+      commitsRecent: commitActivity.reduce((a, b) => a + b, 0),
     };
   });
 
-  const scopeClusters: ScopeCluster[] = usedIds.map((id) => ({
-    id,
-    slug: meta.get(id)?.slug ?? "uncharted",
-    label: meta.get(id)?.label ?? "uncharted",
-    hue: clusterHue(id),
-    bearing: bearingById.get(id) ?? 0,
-    count: counts.get(id) ?? 0,
-  }));
+  const scopeClusters: ScopeCluster[] = usedIds.map((id) => {
+    const c = meta.get(id);
+    const slug = c?.slug ?? "uncharted";
+    return {
+      id,
+      slug,
+      label: c?.label ?? "uncharted",
+      hue: hueForSlug(slug),
+      bearing: bearingById.get(id) ?? 0,
+      count: counts.get(id) ?? 0,
+      keywords: c?.keywords ?? [],
+      description: c?.description ?? "",
+    };
+  });
 
   return { nodes, clusters: scopeClusters, maxStars: Math.max(1, ...nodes.map((n) => n.stars)) };
 }

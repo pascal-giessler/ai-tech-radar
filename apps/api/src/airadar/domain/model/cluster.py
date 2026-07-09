@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from airadar.domain.model.position import Position3D
 
@@ -13,3 +13,5 @@ class Cluster:
     slug: str
     size: int
     centroid: Position3D
+    keywords: list[str] = field(default_factory=list)
+    description: str = ""

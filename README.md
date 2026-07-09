@@ -35,10 +35,20 @@ Radar's mental model, kept current by data instead of a twice-a-year PDF.
 
 - **Semantic clustering** — tools are embedded by *what they do* and grouped into emergent
   territories (`headroom` + `rtk` near token minimization, `litellm` in AI-proxy land).
-  Nothing is hand-curated.
-- **Live momentum radar** — a canvas scope with a rotating sweep that pings contacts, a
-  top-mover reticle, a **Perspective** mode (star-height bars), and a **13-week timeline**
-  scrubber. Records table and a cluster back-office round out the app.
+  Nothing is hand-curated, and the **Clusters** view explains the exact pipeline that
+  produced them (embed → reduce → HDBSCAN → c-TF-IDF), with per-cluster keywords, ring mix,
+  and members.
+- **Overview** — a **Trend Quadrant** placing every tool by momentum × maturity, coloured
+  by its live adoption ring (Adopt / Trial / Assess / Hold), plus category-momentum and
+  top-mover boards. The screenshot you actually want to share.
+- **Live momentum radar** — a canvas scope with a rotating sweep, top-mover reticle,
+  **Perspective** mode, a 13-week timeline scrubber, and cursor-anchored **zoom/pan**.
+- **Filter & focus** — filter the Records table by cluster, ring, momentum, language and
+  score; **hide/unhide any cluster** everywhere with one click.
+- **Adoption rings & repo health** — each tool carries a computed adoption ring plus real
+  GitHub signals: open-issue count and weekly commit activity.
+- **Configurable, forkable** — tune clustering granularity and swap the tracked area (AI,
+  Rust, Platform, …) live from the UI; see [Configuration](#configuration).
 - **Automatic ingestion** — a curated seed list plus GitHub trending, re-scanned every
   30 min; updates stream to open browsers over SSE.
 - **SEO + agentic search** — SSR catalog pages with JSON-LD, `sitemap.xml`, and a
@@ -177,6 +187,36 @@ run non-root with resource limits. Render locally with
 | `SITE_URL` | `http://localhost:3000` | Canonical URL for sitemap/llms.txt |
 | `POSTGRES_PASSWORD` | `airadar` | Bundled database password |
 | `WEB_PORT` / `API_PORT` | `3000` / `8000` | Host ports (compose) |
+
+### Live tuning (no redeploy)
+
+The **Clusters** view has a Configuration panel that writes to the running worker and
+recomputes immediately (over Postgres `NOTIFY`), so you can tune without a restart:
+
+- **Radar area** — which domain to track (see presets below).
+- **Cluster granularity** (`min_cluster_size`, 2–20) — many tight niches vs. few broad
+  territories.
+- **Minimum tools before clustering** (`min_tools`) — how many contacts to gather before
+  territories form.
+
+These are also exposed at `GET/PATCH /api/settings` and persist in the `radar_settings`
+table.
+
+### Fork it for any domain
+
+AI Radar ships pointed at AI/dev tooling, but the area is a swappable preset. Presets live
+in [`apps/api/src/airadar/infrastructure/sources/presets.json`](apps/api/src/airadar/infrastructure/sources/presets.json):
+
+```json
+{ "slug": "rust", "title": "Rust Ecosystem",
+  "topics": ["rust", "rust-lang", "cargo", "wasm", "tokio", "cli"],
+  "seed_file": "seed_tools.json" }
+```
+
+Add an entry with your own GitHub `topics` (and optionally a curated `seed_file`), rebuild,
+and pick it in the Configuration panel. Bundled presets: **AI & Dev Tools** (default),
+**Rust Ecosystem**, **Platform & DevOps**. That is the whole change needed to turn this into
+a "trending Rust radar" or a "trending DevOps radar".
 
 ## CI/CD
 

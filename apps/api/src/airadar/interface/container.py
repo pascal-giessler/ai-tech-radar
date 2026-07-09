@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from airadar.application.queries import GetLandscape, GetTool, ListClusters, ListTools
-from airadar.domain.ports import ClusterRepository, ToolRepository
+from airadar.application.settings import GetSettings, UpdateSettings
+from airadar.domain.ports import ClusterRepository, SettingsRepository, ToolRepository
 from airadar.infrastructure.broadcast import AsyncFanoutBroadcaster
 
 # A scan older than this (or none at all) flips the service to "degraded".
@@ -56,6 +57,10 @@ class Container:
     tools: ToolRepository
     clusters: ClusterRepository
     broadcaster: AsyncFanoutBroadcaster
+    # Settings surface (optional so fake-backed test containers stay terse).
+    settings: SettingsRepository | None = None
+    get_settings: GetSettings | None = None
+    update_settings: UpdateSettings | None = None
     status: RadarStatus = field(default_factory=RadarStatus)
     # Readiness check — returns True when the database is reachable. Defaults to a
     # no-op "reachable" for fakes/tests; wired to a real SELECT 1 in production.

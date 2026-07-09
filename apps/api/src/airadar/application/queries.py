@@ -26,6 +26,8 @@ def tool_summary(tool: Tool) -> dict:
         "url": tool.url,
         "position": _position_dict(tool),
         "cluster_id": tool.cluster_id,
+        "open_issues": tool.open_issues,
+        "commit_activity": tool.commit_activity,
     }
 
 
@@ -44,6 +46,8 @@ def cluster_summary(cluster: Cluster) -> dict:
         "slug": cluster.slug,
         "size": cluster.size,
         "centroid": {"x": cluster.centroid.x, "y": cluster.centroid.y, "z": cluster.centroid.z},
+        "keywords": cluster.keywords,
+        "description": cluster.description,
     }
 
 

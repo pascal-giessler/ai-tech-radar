@@ -16,9 +16,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const detail = await getCluster(slug);
   if (!detail) return { title: "Territory not found" };
+  const desc =
+    detail.cluster.description ||
+    `${detail.cluster.size} trending tools clustered around "${detail.cluster.label}", discovered semantically and ranked by momentum on AI Radar.`;
   return {
     title: `${detail.cluster.label} — tools for this territory`,
-    description: `${detail.cluster.size} trending tools clustered around "${detail.cluster.label}", discovered semantically and ranked by momentum on AI Radar.`,
+    description: desc,
   };
 }
 
@@ -59,10 +62,19 @@ export default async function ClusterPage({ params }: Props) {
       <p className="eyebrow mt-10">semantic territory</p>
       <h1 className="font-display mt-3 text-5xl text-starlight">{detail.cluster.label}</h1>
       <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted">
-        {detail.cluster.size} tools gravitate here. This territory wasn&apos;t hand-made —
-        it emerged from what these tools say they do. If you&apos;re choosing between
-        them, you&apos;re in the right place.
+        {detail.cluster.description
+          ? detail.cluster.description
+          : `${detail.cluster.size} tools gravitate here. This territory emerged from what these tools say they do, not a hand-made taxonomy.`}
       </p>
+      {detail.cluster.keywords.length > 0 && (
+        <ul className="mt-4 flex list-none flex-wrap gap-2">
+          {detail.cluster.keywords.map((k) => (
+            <li key={k} className="rounded-full border border-phosphor/20 px-2.5 py-[3px] font-mono text-[11px] text-muted">
+              {k}
+            </li>
+          ))}
+        </ul>
+      )}
 
       <div className="mt-12">
         {detail.tools.map((tool) => (

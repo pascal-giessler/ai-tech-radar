@@ -12,6 +12,8 @@ import time
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from airadar.config import Settings
+from airadar.infrastructure.broadcast import AsyncFanoutBroadcaster
+from airadar.infrastructure.pgnotify import CONFIG_CHANNEL, PgNotifyListener
 from airadar.runtime import build_refresh_job, configure_logging, init_db_with_retry, logger
 
 HEARTBEAT_FILE = pathlib.Path("/tmp/worker-alive")  # noqa: S108 — ephemeral liveness marker
@@ -46,6 +48,21 @@ async def run() -> None:
     scheduler.start()
     logger.info("worker started; ingesting every %s min", settings.ingest_interval_minutes)
 
+    # LISTEN for config changes: a PATCH /api/settings on any api pod emits a NOTIFY
+    # on CONFIG_CHANNEL; on receipt we run an immediate ingest+recompute that re-reads
+    # the settings row. RefreshJob's lock skips overlapping runs (max_instances=1).
+    def on_config_changed(_event: dict) -> None:
+        logger.info("config changed; triggering immediate refresh")
+        asyncio.create_task(asyncio.to_thread(job.run_sync))
+
+    config_listener = PgNotifyListener(
+        settings.database_url,
+        AsyncFanoutBroadcaster(),
+        channel=CONFIG_CHANNEL,
+        on_event=on_config_changed,
+    )
+    config_task = asyncio.create_task(config_listener.run())
+
     await asyncio.to_thread(job.run_sync)  # seed immediately
 
     stop = asyncio.Event()
@@ -56,6 +73,8 @@ async def run() -> None:
 
     logger.info("worker shutting down")
     heartbeat.cancel()
+    config_listener.stop()
+    config_task.cancel()
     scheduler.shutdown(wait=False)
 
 

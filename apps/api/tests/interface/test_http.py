@@ -5,8 +5,11 @@ from fastapi.testclient import TestClient
 from airadar.application.ingest_trending import IngestTrendingTools
 from airadar.application.queries import GetLandscape, GetTool, ListClusters, ListTools
 from airadar.application.recompute_landscape import RecomputeLandscape
+from airadar.application.settings import GetSettings, UpdateSettings
+from airadar.domain.model.radar_settings import RadarSettings
 from airadar.domain.services.trend_scorer import TrendScorer
 from airadar.infrastructure.broadcast import AsyncFanoutBroadcaster
+from airadar.infrastructure.sources.presets import load_presets
 from airadar.interface.container import Container
 from airadar.interface.http import create_app
 
@@ -16,6 +19,7 @@ from tests.fakes import (
     FixedClock,
     GridProjector,
     InMemoryClusterRepository,
+    InMemorySettingsRepository,
     InMemoryToolRepository,
     KeywordLabeler,
     ModuloClusterer,
@@ -114,6 +118,67 @@ def test_cluster_detail_includes_member_tools(client) -> None:
 
 def test_cluster_404(client) -> None:
     assert client.get("/api/clusters/nope").status_code == 404
+
+
+@pytest.fixture()
+def settings_env():
+    """A container wired with the settings surface + a recording NOTIFY publisher."""
+    repo = InMemorySettingsRepository(RadarSettings())
+    broadcaster = RecordingBroadcaster()
+    presets = load_presets()
+    get_settings = GetSettings(repo, presets, default_min_cluster_size=4, default_min_tools=12)
+    update_settings = UpdateSettings(repo, presets, get_settings, broadcaster)
+    tools, clusters = InMemoryToolRepository(), InMemoryClusterRepository()
+    container = Container(
+        get_landscape=GetLandscape(tools, clusters),
+        get_tool=GetTool(tools),
+        list_tools=ListTools(tools),
+        list_clusters=ListClusters(clusters),
+        tools=tools,
+        clusters=clusters,
+        broadcaster=AsyncFanoutBroadcaster(),
+        settings=repo,
+        get_settings=get_settings,
+        update_settings=update_settings,
+    )
+    return TestClient(create_app(container)), broadcaster
+
+
+def test_get_settings_returns_effective_shape(settings_env) -> None:
+    client, _ = settings_env
+    body = client.get("/api/settings").json()
+    assert body["area_preset"] == "ai"
+    assert body["min_cluster_size"] == 4
+    assert body["min_tools"] == 12
+    assert {"slug", "title"} <= body["presets"][0].keys()
+    assert body["pipeline"]["algorithm"] == "HDBSCAN"
+
+
+def test_patch_settings_persists_and_emits_notify(settings_env) -> None:
+    client, broadcaster = settings_env
+    res = client.patch("/api/settings", json={"area_preset": "rust", "min_cluster_size": 8})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["area_preset"] == "rust"
+    assert body["min_cluster_size"] == 8
+    assert broadcaster.events == [{"type": "radar_config_changed"}]
+
+
+def test_patch_settings_rejects_unknown_preset(settings_env) -> None:
+    client, _ = settings_env
+    assert client.patch("/api/settings", json={"area_preset": "nope"}).status_code == 422
+
+
+def test_patch_settings_rejects_out_of_range(settings_env) -> None:
+    client, _ = settings_env
+    assert client.patch("/api/settings", json={"min_cluster_size": 99}).status_code == 422
+    assert client.patch("/api/settings", json={"min_tools": 1}).status_code == 422
+
+
+def test_cluster_detail_includes_profile(client) -> None:
+    body = client.get("/api/clusters/uncharted").json()
+    assert "keywords" in body["cluster"]
+    assert "description" in body["cluster"]
 
 
 async def test_fanout_broadcaster_delivers_to_subscribers() -> None:

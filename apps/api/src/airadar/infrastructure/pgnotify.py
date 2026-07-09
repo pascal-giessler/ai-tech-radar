@@ -18,6 +18,7 @@ from airadar.infrastructure.broadcast import AsyncFanoutBroadcaster
 logger = logging.getLogger(__name__)
 
 DEFAULT_CHANNEL = "airadar_events"
+CONFIG_CHANNEL = "radar_config_changed"
 
 
 def to_libpq_dsn(database_url: str) -> str:

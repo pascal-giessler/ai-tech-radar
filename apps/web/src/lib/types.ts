@@ -17,6 +17,9 @@ export interface Tool {
   stars_gained: number;
   trend_score: number;
   ring: Ring | null;
+  open_issues: number;
+  /** Weekly commit counts, most-recent-last, up to ~12 weeks. Empty when unavailable. */
+  commit_activity: number[];
   url: string;
   position: Position3D | null;
   cluster_id: number | null;
@@ -34,6 +37,10 @@ export interface Cluster {
   slug: string;
   size: number;
   centroid: Position3D;
+  /** Top c-TF-IDF terms that characterise the cluster. */
+  keywords: string[];
+  /** Templated, deterministic explanation of what the cluster is and how it formed. */
+  description: string;
 }
 
 export interface LandscapeData {
@@ -46,3 +53,28 @@ export interface ClusterDetail {
   cluster: Cluster;
   tools: Tool[];
 }
+
+/* ---------- configuration ---------- */
+
+export interface PresetOption {
+  slug: string;
+  title: string;
+}
+
+export interface PipelineInfo {
+  embedding_model: string;
+  embedding_dim: number;
+  reduce_to: number;
+  algorithm: string;
+  labeler: string;
+}
+
+export interface RadarSettings {
+  area_preset: string;
+  min_cluster_size: number;
+  min_tools: number;
+  presets: PresetOption[];
+  pipeline: PipelineInfo;
+}
+
+export type RadarSettingsPatch = Partial<Pick<RadarSettings, "area_preset" | "min_cluster_size" | "min_tools">>;
