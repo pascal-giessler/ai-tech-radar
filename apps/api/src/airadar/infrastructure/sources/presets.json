@@ -1,0 +1,20 @@
+[
+  {
+    "slug": "ai",
+    "title": "AI & Dev Tools",
+    "topics": ["llm", "ai-agents", "developer-tools", "mcp", "rag", "llmops"],
+    "seed_file": "seed_tools.json"
+  },
+  {
+    "slug": "rust",
+    "title": "Rust Ecosystem",
+    "topics": ["rust", "rust-lang", "cargo", "wasm", "tokio", "cli"],
+    "seed_file": "seed_tools.json"
+  },
+  {
+    "slug": "platform",
+    "title": "Platform & DevOps",
+    "topics": ["kubernetes", "platform-engineering", "devops", "gitops", "observability", "infrastructure-as-code"],
+    "seed_file": "seed_tools.json"
+  }
+]

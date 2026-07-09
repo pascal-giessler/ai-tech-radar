@@ -29,6 +29,7 @@ class RecomputeLandscape:
         labeler: ClusterLabeler,
         broadcaster: UpdateBroadcaster,
         min_tools: int = 12,
+        min_cluster_size: int = 4,
     ) -> None:
         self._tools = tools
         self._clusters = clusters
@@ -38,8 +39,16 @@ class RecomputeLandscape:
         self._labeler = labeler
         self._broadcaster = broadcaster
         self._min_tools = min_tools
+        self._min_cluster_size = min_cluster_size
 
-    def execute(self) -> LandscapeReport:
+    def execute(
+        self, min_cluster_size: int | None = None, min_tools: int | None = None
+    ) -> LandscapeReport:
+        # Effective run params: explicit call args (from settings) win over the
+        # instance defaults (from env/const).
+        min_cluster_size = min_cluster_size if min_cluster_size is not None else self._min_cluster_size
+        min_tools = min_tools if min_tools is not None else self._min_tools
+
         tools = self._tools.list_all()
         if not tools:
             return LandscapeReport(tool_count=0, cluster_count=0)
@@ -51,10 +60,10 @@ class RecomputeLandscape:
         for tool, position in zip(tools, positions, strict=True):
             tool.position = position
 
-        if len(tools) < self._min_tools:
+        if len(tools) < min_tools:
             assignments = [-1] * len(tools)
         else:
-            assignments = self._clusterer.assign(embeddings)
+            assignments = self._clusterer.assign(embeddings, min_cluster_size=min_cluster_size)
 
         clusters = self._build_clusters(tools, assignments)
         for tool in tools:
@@ -79,21 +88,26 @@ class RecomputeLandscape:
             members[raw_label].append(tool)
 
         real_labels = sorted(label for label in members if label != -1)
-        labels_text = self._labeler.label(
+        profiles = self._labeler.profile(
             {label: [t.description for t in members[label]] for label in real_labels}
         )
 
         # Remap: raw clusterer labels -> stable ids with 0 reserved for Uncharted.
         clusters: list[Cluster] = []
         if -1 in members:
-            clusters.append(self._make_cluster(UNCHARTED_ID, UNCHARTED_LABEL, members[-1]))
-        for new_id, raw_label in enumerate(real_labels, start=1):
             clusters.append(
-                self._make_cluster(new_id, labels_text[raw_label], members[raw_label])
+                self._make_cluster(UNCHARTED_ID, UNCHARTED_LABEL, members[-1], keywords=[])
+            )
+        for new_id, raw_label in enumerate(real_labels, start=1):
+            label, keywords = profiles[raw_label]
+            clusters.append(
+                self._make_cluster(new_id, label, members[raw_label], keywords=keywords)
             )
         return clusters
 
-    def _make_cluster(self, cluster_id: int, label: str, members: list[Tool]) -> Cluster:
+    def _make_cluster(
+        self, cluster_id: int, label: str, members: list[Tool], keywords: list[str]
+    ) -> Cluster:
         for tool in members:
             tool.cluster_id = cluster_id
         n = len(members)
@@ -102,4 +116,19 @@ class RecomputeLandscape:
             y=sum(t.position.y for t in members) / n,
             z=sum(t.position.z for t in members) / n,
         )
-        return Cluster(id=cluster_id, label=label, slug=slugify(label), size=n, centroid=centroid)
+        return Cluster(
+            id=cluster_id,
+            label=label,
+            slug=slugify(label),
+            size=n,
+            centroid=centroid,
+            keywords=keywords,
+            description=self._describe(n, keywords),
+        )
+
+    @staticmethod
+    def _describe(size: int, keywords: list[str]) -> str:
+        base = f"{size} tools grouped by semantic similarity"
+        if keywords:
+            return f"{base} — strongest signals: {', '.join(keywords[:3])}."
+        return f"{base}."

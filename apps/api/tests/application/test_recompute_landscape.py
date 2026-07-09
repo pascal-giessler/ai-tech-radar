@@ -108,3 +108,38 @@ def test_report_counts() -> None:
 
     assert report.tool_count == 5
     assert report.cluster_count == 1
+
+
+def test_execute_time_min_cluster_size_is_threaded_into_clusterer() -> None:
+    repo = InMemoryToolRepository()
+    clusterer = ModuloClusterer(n=2)
+    ingest(repo, 14)
+    make_use_case(repo, clusterer=clusterer).execute(min_cluster_size=7)
+
+    assert clusterer.last_min_cluster_size == 7
+
+
+def test_execute_time_min_tools_overrides_instance_default() -> None:
+    repo = InMemoryToolRepository()
+    clusters = InMemoryClusterRepository()
+    clusterer = ModuloClusterer(n=2)
+    ingest(repo, 5)
+    # instance default min_tools=12 would force Uncharted; override drops it to 3.
+    make_use_case(repo, cluster_repo=clusters, clusterer=clusterer).execute(min_tools=3)
+
+    assert clusterer.last_min_cluster_size is not None  # clusterer was actually called
+    assert {c.label for c in clusters.list_all()} != {"Uncharted"}
+
+
+def test_real_clusters_get_keywords_and_description() -> None:
+    repo = InMemoryToolRepository()
+    clusters = InMemoryClusterRepository()
+    ingest(repo, 14)
+    make_use_case(repo, cluster_repo=clusters, clusterer=ModuloClusterer(n=2)).execute()
+
+    real = [c for c in clusters.list_all() if c.label != "Uncharted"]
+    assert real
+    for cluster in real:
+        assert cluster.keywords  # top c-TF-IDF terms from the fake labeler
+        assert "grouped by semantic similarity" in cluster.description
+        assert "strongest signals" in cluster.description

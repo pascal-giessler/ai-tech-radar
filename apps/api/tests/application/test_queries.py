@@ -47,11 +47,27 @@ def test_landscape_payload_shape() -> None:
     assert {
         "slug", "name", "owner", "description", "language", "topics",
         "stars", "stars_gained", "trend_score", "ring", "url", "position", "cluster_id",
+        "open_issues", "commit_activity",
     } <= tool.keys()
     assert tool["ring"] in {"adopt", "trial", "assess", "hold"}
+    assert tool["open_issues"] == 0
+    assert tool["commit_activity"] == []
     assert {"x", "y", "z"} == tool["position"].keys()
     cluster = payload["clusters"][0]
-    assert {"id", "label", "slug", "size", "centroid"} <= cluster.keys()
+    assert {"id", "label", "slug", "size", "centroid", "keywords", "description"} <= cluster.keys()
+
+
+def test_tool_summary_carries_activity_signals() -> None:
+    from airadar.application.queries import tool_summary
+
+    from tests.fakes import discovered
+
+    tools = InMemoryToolRepository()
+    items = [discovered(open_issues=42, commit_activity=[1, 2, 3])]
+    IngestTrendingTools(FakeToolSource(items), tools, TrendScorer(), FixedClock()).execute()
+    summary = tool_summary(tools.list_all()[0])
+    assert summary["open_issues"] == 42
+    assert summary["commit_activity"] == [1, 2, 3]
 
 
 def test_get_tool_returns_detail_or_none() -> None:

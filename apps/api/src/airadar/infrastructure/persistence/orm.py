@@ -38,6 +38,8 @@ tools_table = Table(
     Column("cluster_id", Integer, nullable=True),
     Column("embedding", Vector(EMBEDDING_DIM), nullable=True),
     Column("embedded_fingerprint", String(64), nullable=True),
+    Column("open_issues", Integer, nullable=False, default=0),
+    Column("commit_activity", JSON, nullable=False, default=list),
 )
 
 clusters_table = Table(
@@ -50,4 +52,19 @@ clusters_table = Table(
     Column("centroid_x", Float, nullable=False),
     Column("centroid_y", Float, nullable=False),
     Column("centroid_z", Float, nullable=False),
+    Column("keywords", JSON, nullable=False, default=list),
+    Column("description", Text, nullable=False, default=""),
 )
+
+# Single-row (id fixed = 1) tunable configuration. Nullable knobs fall back to
+# env/const defaults when unset.
+radar_settings_table = Table(
+    "radar_settings",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=False),
+    Column("area_preset", String(64), nullable=False, default="ai"),
+    Column("min_cluster_size", Integer, nullable=True),
+    Column("min_tools", Integer, nullable=True),
+)
+
+SETTINGS_ROW_ID = 1

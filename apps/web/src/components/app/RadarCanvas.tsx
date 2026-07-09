@@ -38,10 +38,14 @@ export function RadarCanvas({
   const dateRef = useRef<HTMLSpanElement>(null);
   const leadRef = useRef<HTMLSpanElement>(null);
   const [playing, setPlaying] = useState(false);
+  const [zoom, setZoomState] = useState(1);
 
   const S = useRef({
     orbit: 0,
     tilt: 0,
+    zoom: 1,
+    panX: 0,
+    panY: 0,
     timeF: STEPS - 1,
     timeTarget: STEPS - 1,
     playing: false,
@@ -88,6 +92,28 @@ export function RadarCanvas({
     S.current.scrubT = window.setTimeout(() => (S.current.userScrub = false), 180);
   }, []);
 
+  // Zoom about the radar centre (buttons); wheel zoom about the cursor lives in the
+  // canvas effect. panX/panY reset with zoom so the view never gets lost off-frame.
+  const stepZoom = useCallback((factor: number) => {
+    setZoomState((z) => {
+      const next = Math.min(5, Math.max(1, Math.round(z * factor * 100) / 100));
+      S.current.zoom = next;
+      if (next === 1) {
+        S.current.panX = 0;
+        S.current.panY = 0;
+      }
+      return next;
+    });
+  }, []);
+  const resetView = useCallback(() => {
+    S.current.zoom = 1;
+    S.current.panX = 0;
+    S.current.panY = 0;
+    S.current.orbit = 0;
+    S.current.tilt = 0;
+    setZoomState(1);
+  }, []);
+
   useEffect(() => {
     const cv = canvasRef.current;
     if (!cv) return;
@@ -130,9 +156,10 @@ export function RadarCanvas({
       const botPad = 108;
       const availW = Math.max(160, w - pad * 2);
       const availH = Math.max(160, h - topPad - botPad);
-      const cx = pad + availW / 2;
-      const cy = topPad + availH / 2;
-      const rad = (Math.min(availW, availH) / 2) * 0.92;
+      const cx = pad + availW / 2 + st.panX;
+      const cy = topPad + availH / 2 + st.panY;
+      const rad = (Math.min(availW, availH) / 2) * 0.92 * st.zoom;
+      const zoomSize = Math.min(1.7, Math.max(1, Math.sqrt(st.zoom)));
       const t = (performance.now() - t0) / 1000;
       const glow = 0.72;
       const sweepSpeed = 0.5;
@@ -262,7 +289,7 @@ export function RadarCanvas({
       for (const node of nodes) {
         const hs = sampleHist(node, tf);
         const radius = Math.max(0.2, Math.min(0.93, 0.92 - (hs.score / 100) * 0.66 + node.rjit));
-        const size = 3.4 + Math.min(9, Math.max(0, Math.log10(Math.max(10, hs.stars)) - 2.8) * 3.5);
+        const size = (3.4 + Math.min(9, Math.max(0, Math.log10(Math.max(10, hs.stars)) - 2.8) * 3.5)) * zoomSize;
         sampled.set(node, { score: hs.score, stars: hs.stars, radius, size });
         const notDim = !((q && !node.hay.includes(q)) || (iso && node.clusterSlug !== iso));
         if (notDim && hs.score > leadScore) {
@@ -550,8 +577,14 @@ export function RadarCanvas({
         const dx = e.clientX - st.lastX;
         const dy = e.clientY - st.lastY;
         st.moved += Math.abs(dx) + Math.abs(dy);
-        st.orbit += dx * 0.006;
-        st.tilt = Math.max(-0.2, Math.min(0.55, st.tilt + dy * 0.003));
+        if (e.shiftKey || st.zoom > 1.02) {
+          // pan the zoomed view instead of orbiting
+          st.panX += dx;
+          st.panY += dy;
+        } else {
+          st.orbit += dx * 0.006;
+          st.tilt = Math.max(-0.2, Math.min(0.55, st.tilt + dy * 0.003));
+        }
         st.lastX = e.clientX;
         st.lastY = e.clientY;
         return;
@@ -572,11 +605,39 @@ export function RadarCanvas({
       if (st.moved > 5) return;
       onSelect(st.hover || null);
     };
+    // Wheel / trackpad-pinch zoom, anchored on the cursor so you zoom into what you
+    // point at. Trackpad pinch arrives as a wheel event with ctrlKey set.
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const r = cv.getBoundingClientRect();
+      const mx = e.clientX - r.left;
+      const my = e.clientY - r.top;
+      const z0 = st.zoom;
+      const z1 = Math.min(5, Math.max(1, z0 * Math.exp(-e.deltaY * 0.0016)));
+      if (z1 === z0) return;
+      const pad = w > 640 ? 76 : 34;
+      const availW = Math.max(160, w - pad * 2);
+      const availH = Math.max(160, h - 44 - 108);
+      const bcx = pad + availW / 2;
+      const bcy = 44 + availH / 2;
+      const cx = bcx + st.panX;
+      const cy = bcy + st.panY;
+      st.panX = mx - (mx - cx) * (z1 / z0) - bcx;
+      st.panY = my - (my - cy) * (z1 / z0) - bcy;
+      st.zoom = z1;
+      if (z1 <= 1) {
+        st.zoom = 1;
+        st.panX = 0;
+        st.panY = 0;
+      }
+      setZoomState(Math.round(st.zoom * 100) / 100);
+    };
 
     cv.addEventListener("mousemove", onMove);
     cv.addEventListener("mousedown", onDown);
     cv.addEventListener("click", onClick);
     cv.addEventListener("mouseleave", onLeave);
+    cv.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("mouseup", onUp);
     return () => {
       cancelAnimationFrame(raf);
@@ -585,6 +646,7 @@ export function RadarCanvas({
       cv.removeEventListener("mousedown", onDown);
       cv.removeEventListener("click", onClick);
       cv.removeEventListener("mouseleave", onLeave);
+      cv.removeEventListener("wheel", onWheel);
       window.removeEventListener("mouseup", onUp);
     };
   }, [onSelect]);
@@ -615,6 +677,36 @@ export function RadarCanvas({
         className="pointer-events-none absolute inset-0 z-[2]"
         style={{ background: "radial-gradient(120% 100% at 50% 44%, transparent 56%, rgba(3,6,12,0.72) 100%)" }}
       />
+
+      {/* zoom controls */}
+      <div className="absolute right-6 top-5 z-10 flex flex-col items-stretch gap-1 rounded-[12px] border border-[rgba(116,224,255,0.16)] bg-[rgba(8,16,26,0.72)] p-1 shadow-[0_12px_34px_rgba(0,0,0,0.45)] backdrop-blur-[18px]">
+        {[
+          { k: "in", label: "+", aria: "Zoom in", onClick: () => stepZoom(1.35), disabled: zoom >= 5 },
+          { k: "out", label: "−", aria: "Zoom out", onClick: () => stepZoom(1 / 1.35), disabled: zoom <= 1 },
+        ].map((b) => (
+          <button
+            key={b.k}
+            onClick={b.onClick}
+            disabled={b.disabled}
+            aria-label={b.aria}
+            className="flex h-8 w-8 items-center justify-center rounded-[9px] text-[16px] leading-none text-[#93b4c9] transition-colors hover:bg-[rgba(116,224,255,0.1)] hover:text-[#e2f3ff] disabled:cursor-not-allowed disabled:opacity-35"
+          >
+            {b.label}
+          </button>
+        ))}
+        <div className="py-0.5 text-center font-mono text-[9px] text-[#5f8299]">{zoom.toFixed(1)}×</div>
+        <button
+          onClick={resetView}
+          disabled={zoom === 1}
+          aria-label="Reset view"
+          className="flex h-7 w-8 items-center justify-center rounded-[9px] text-[#93b4c9] transition-colors hover:bg-[rgba(116,224,255,0.1)] hover:text-[#e2f3ff] disabled:cursor-not-allowed disabled:opacity-35"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+            <path d="M3 3v5h5" />
+          </svg>
+        </button>
+      </div>
 
       {/* range/bearing legend */}
       <div className="absolute left-6 bottom-5 z-10 flex items-center gap-4 font-mono text-[10.5px] uppercase tracking-[0.1em] text-[#5f8299]">

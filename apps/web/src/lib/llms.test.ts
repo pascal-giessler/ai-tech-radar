@@ -6,7 +6,15 @@ import type { LandscapeData } from "./types";
 const data: LandscapeData = {
   generated_at: "2026-07-07T12:00:00+00:00",
   clusters: [
-    { id: 1, label: "Token Usage", slug: "token-usage", size: 2, centroid: { x: 0, y: 0, z: 0 } },
+    {
+      id: 1,
+      label: "Token Usage",
+      slug: "token-usage",
+      size: 2,
+      centroid: { x: 0, y: 0, z: 0 },
+      keywords: ["token", "proxy"],
+      description: "2 tools grouped by semantic similarity.",
+    },
   ],
   tools: [
     {
@@ -20,6 +28,8 @@ const data: LandscapeData = {
       stars_gained: 100,
       trend_score: 40,
       ring: "assess",
+      open_issues: 12,
+      commit_activity: [3, 5, 2, 8],
       url: "https://github.com/acme/rtk",
       position: { x: 0, y: 0, z: 0 },
       cluster_id: 1,
@@ -35,6 +45,8 @@ const data: LandscapeData = {
       stars_gained: 300,
       trend_score: 70,
       ring: "trial",
+      open_issues: 40,
+      commit_activity: [10, 12, 9, 15],
       url: "https://github.com/acme/headroom",
       position: { x: 1, y: 0, z: 0 },
       cluster_id: 1,

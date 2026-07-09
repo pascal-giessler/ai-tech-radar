@@ -1,199 +1,205 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
+import type { SettingsController } from "@/hooks/useSettings";
+import type { ClusterVisibility } from "@/hooks/useClusterVisibility";
 import {
-  ACCENT,
-  COLOR_OPTS,
+  RING_COLOR,
+  RING_ORDER,
   TIER_COLOR,
   cineTier,
   clusterColor,
+  ringLabel,
   type ScopeCluster,
   type ScopeNode,
 } from "@/lib/cinematic";
+import type { Ring } from "@/lib/types";
 
-interface Candidate {
-  label: string;
-  hue: number;
-  keywords: string;
-  count: number;
+import { ClusterExplainer } from "./ClusterExplainer";
+import { SettingsPanel } from "./SettingsPanel";
+import { EyeToggle } from "./visibility";
+
+function RingMix({ members }: { members: ScopeNode[] }) {
+  const counts = new Map<Ring | "unrated", number>();
+  for (const n of members) {
+    const key = n.ring ?? "unrated";
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  const total = members.length || 1;
+  const segs: { key: Ring | "unrated"; color: string; n: number }[] = [
+    ...RING_ORDER.map((r) => ({ key: r as Ring | "unrated", color: RING_COLOR[r], n: counts.get(r) ?? 0 })),
+    { key: "unrated" as const, color: "rgba(107,138,162,0.5)", n: counts.get("unrated") ?? 0 },
+  ].filter((s) => s.n > 0);
+
+  return (
+    <div className="flex h-[6px] w-full overflow-hidden rounded-full bg-[rgba(116,224,255,0.08)]">
+      {segs.map((s) => (
+        <span key={s.key} title={`${s.key}: ${s.n}`} style={{ width: `${(s.n / total) * 100}%`, background: s.color }} />
+      ))}
+    </div>
+  );
 }
 
-export function ClustersView({ nodes, clusters }: { nodes: ScopeNode[]; clusters: ScopeCluster[] }) {
-  const [ncName, setNcName] = useState("");
-  const [ncHue, setNcHue] = useState(195);
-  const [ncKeywords, setNcKeywords] = useState("");
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
+function ProfileCard({
+  cluster,
+  members,
+  hidden,
+  onToggle,
+  onSolo,
+  onPick,
+}: {
+  cluster: ScopeCluster;
+  members: ScopeNode[];
+  hidden: boolean;
+  onToggle: () => void;
+  onSolo: () => void;
+  onPick: (slug: string) => void;
+}) {
+  const avg = members.length ? Math.round(members.reduce((a, n) => a + n.score, 0) / members.length) : 0;
+  const tier = cineTier(avg);
+  const top = [...members].sort((a, b) => b.score - a.score).slice(0, 3);
+  const dot = clusterColor(cluster.hue, 0.78, 0.15);
 
-  const categories = useMemo(
-    () =>
-      clusters.map((c) => {
-        const ts = nodes.filter((n) => n.cid === c.id);
-        const avg = ts.length ? Math.round(ts.reduce((a, n) => a + n.score, 0) / ts.length) : 0;
-        const top = ts.slice().sort((a, b) => b.score - a.score)[0];
-        const tier = cineTier(avg);
-        return { ...c, avg, tier, tierColor: TIER_COLOR[tier], topName: top ? `${top.owner}/${top.name}` : "—" };
-      }),
-    [clusters, nodes],
+  return (
+    <div
+      className="rounded-[16px] border border-[rgba(116,224,255,0.13)] bg-[rgba(8,16,26,0.55)] p-[18px] shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-[14px] transition-opacity"
+      style={{ opacity: hidden ? 0.45 : 1 }}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="h-[12px] w-[12px] flex-none rounded-[3px]" style={{ background: dot }} />
+          <span className="truncate text-[14px] font-semibold text-[#eaf7ff]">{cluster.label}</span>
+        </div>
+        <div className="flex flex-none items-center gap-1.5">
+          <span className="font-mono text-[11px] text-[#5f8299]">{members.length}</span>
+          <button
+            onClick={onSolo}
+            title="Show only this cluster"
+            className="rounded-md border border-[rgba(116,224,255,0.16)] px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.08em] text-[#93b4c9] transition-colors hover:text-[#e2f3ff]"
+          >
+            solo
+          </button>
+          <EyeToggle hidden={hidden} onToggle={onToggle} />
+        </div>
+      </div>
+
+      {cluster.description && (
+        <p className="mt-2.5 text-[12px] leading-[1.5] text-[#8aa6ba]">{cluster.description}</p>
+      )}
+
+      {cluster.keywords.length > 0 && (
+        <ul className="mt-3 flex list-none flex-wrap gap-1.5">
+          {cluster.keywords.slice(0, 6).map((k) => (
+            <li key={k} className="rounded-full border border-[rgba(116,224,255,0.16)] px-2 py-[2px] font-mono text-[10px] text-[#93b4c9]">
+              {k}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="mt-3.5">
+        <div className="mb-1.5 flex items-center justify-between font-mono text-[10px] text-[#5f8299]">
+          <span>ring mix</span>
+          <span style={{ color: TIER_COLOR[tier] }}>
+            avg {avg} · {tier}
+          </span>
+        </div>
+        <RingMix members={members} />
+      </div>
+
+      <div className="mt-3.5 border-t border-[rgba(116,224,255,0.09)] pt-2.5">
+        <ul className="flex list-none flex-col gap-0.5">
+          {top.map((n) => (
+            <li key={n.slug}>
+              <button
+                onClick={() => onPick(n.slug)}
+                className="flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1 text-left transition-colors hover:bg-[rgba(116,224,255,0.06)]"
+              >
+                <span className="min-w-0 truncate text-[12px] text-[#c6deec]">{n.owner}/{n.name}</span>
+                <span className="flex flex-none items-center gap-2">
+                  <span className="font-mono text-[10px]" style={{ color: n.ring ? RING_COLOR[n.ring] : "#6b8aa2" }}>
+                    {ringLabel(n.ring)}
+                  </span>
+                  <span className="font-mono text-[11px] text-[#5f8299]">{n.score}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
   );
+}
 
-  const kw = ncKeywords.toLowerCase().split(/[\s,]+/).filter(Boolean);
-  const matched = kw.length ? nodes.filter((n) => kw.some((k) => n.hay.includes(k))) : [];
-  const canCreate = ncName.trim().length > 0;
-  const previewColor = `oklch(0.82 0.15 ${ncHue})`;
+export function ClustersView({
+  nodes,
+  clusters,
+  visibility,
+  settings,
+  toolCount,
+  onPick,
+}: {
+  /** All nodes, unfiltered — hidden clusters still show here (dimmed) so they can be restored. */
+  nodes: ScopeNode[];
+  clusters: ScopeCluster[];
+  visibility: ClusterVisibility;
+  settings: SettingsController;
+  toolCount: number;
+  onPick: (slug: string) => void;
+}) {
+  const allSlugs = useMemo(() => clusters.map((c) => c.slug), [clusters]);
+  const membersBySlug = useMemo(() => {
+    const m = new Map<string, ScopeNode[]>();
+    for (const n of nodes) {
+      const arr = m.get(n.clusterSlug) ?? [];
+      arr.push(n);
+      m.set(n.clusterSlug, arr);
+    }
+    return m;
+  }, [nodes]);
 
-  const create = () => {
-    if (!canCreate) return;
-    setCandidates((cs) => [{ label: ncName.trim(), hue: ncHue, keywords: ncKeywords.trim(), count: matched.length }, ...cs]);
-    setNcName("");
-    setNcKeywords("");
-  };
-
-  const label =
-    "mb-3 font-mono text-[10.5px] uppercase tracking-[0.16em] text-[#5f8299]";
-  const input =
-    "w-full rounded-[10px] border border-[rgba(116,224,255,0.16)] bg-[rgba(9,18,30,0.7)] px-3 py-2.5 text-[13.5px] text-[#e2f3ff]";
+  const ordered = useMemo(() => [...clusters].sort((a, b) => b.count - a.count), [clusters]);
 
   return (
     <div className="absolute inset-0 overflow-auto">
-      <div className="mx-auto grid max-w-[1080px] grid-cols-[repeat(auto-fit,minmax(360px,1fr))] items-start gap-7 px-7 pb-14 pt-6">
-        {/* left: active categories + proposed */}
-        <div className="flex min-w-0 flex-col gap-[22px]">
-          <div className="min-w-0">
-            <div className={label}>Active categories</div>
-            <div className="grid grid-cols-2 gap-3">
-              {categories.map((c) => (
-                <div
-                  key={c.id}
-                  className="rounded-[14px] border border-[rgba(116,224,255,0.13)] bg-[rgba(8,16,26,0.55)] p-4 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-[14px]"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex min-w-0 items-center gap-[9px]">
-                      <span
-                        className="h-[11px] w-[11px] flex-none rounded-[3px]"
-                        style={{ background: clusterColor(c.hue, 0.78, 0.15), boxShadow: `0 0 10px ${clusterColor(c.hue, 0.78, 0.15)}` }}
-                      />
-                      <span className="truncate text-[13.5px] font-semibold text-[#eaf7ff]">{c.label}</span>
-                    </div>
-                    <span className="flex-none font-mono text-[11px] text-[#5f8299]">{c.count}</span>
-                  </div>
-                  <div className="mt-[11px] flex items-baseline justify-between font-mono text-[11px] text-[#5f8299]">
-                    <span>
-                      avg score <span className="text-[#e2f3ff]">{c.avg}</span>
-                    </span>
-                    <span style={{ color: c.tierColor }}>{c.tier}</span>
-                  </div>
-                  <div className="mt-2 truncate border-t border-[rgba(116,224,255,0.09)] pt-[9px] text-[11.5px] text-[#93b4c9]">
-                    lead · {c.topName}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+      <div className="mx-auto flex max-w-[1180px] flex-col gap-5 px-7 pb-14 pt-[22px]">
+        <ClusterExplainer settings={settings.settings} toolCount={toolCount} clusterCount={clusters.length} />
 
-          {candidates.length > 0 && (
-            <div>
-              <div className={label}>Proposed clusters</div>
-              <div className="flex flex-col gap-2.5">
-                {candidates.map((c, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center gap-3 rounded-xl border border-dashed border-[rgba(116,224,255,0.4)] bg-[rgba(116,224,255,0.05)] px-[15px] py-[13px]"
-                  >
-                    <span className="h-[11px] w-[11px] flex-none rounded-[3px]" style={{ background: `oklch(0.78 0.15 ${c.hue})`, boxShadow: `0 0 10px oklch(0.78 0.15 ${c.hue})` }} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[13.5px] font-semibold text-[#eaf7ff]">{c.label}</span>
-                        <span className="rounded-[5px] border border-[rgba(116,224,255,0.4)] px-1.5 py-px font-mono text-[9px] uppercase tracking-[0.1em] text-[#74e0ff]">
-                          candidate
-                        </span>
-                      </div>
-                      <div className="mt-[3px] font-mono text-[11px] text-[#5f8299]">
-                        {c.count} matching contacts · seeds: {c.keywords || "—"}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setCandidates((cs) => cs.filter((_, i) => i !== idx))}
-                      className="h-7 w-7 flex-none rounded-lg border border-[rgba(116,224,255,0.18)] bg-[rgba(9,18,30,0.6)] text-sm leading-none text-[#93b4c9]"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <SettingsPanel controller={settings} />
 
-        {/* right: candidate builder */}
-        <div className="sticky top-0 min-w-0 rounded-2xl border border-[rgba(116,224,255,0.16)] bg-[rgba(8,16,26,0.6)] p-[22px] shadow-[0_20px_60px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(160,235,255,0.06)] backdrop-blur-[18px]">
-          <h3 className="m-0 mb-1 text-base font-medium tracking-[0.02em] text-[#eaf7ff]">New candidate cluster</h3>
-          <p className="m-0 mb-[18px] text-[12.5px] leading-[1.5] text-[#5f8299]">
-            Propose an emerging category by seeding it with keywords. Preview how many tracked contacts fall into orbit
-            before you commit.
-          </p>
-
-          <label className={`block ${label.replace("mb-3", "mb-[7px]")}`}>Cluster name</label>
-          <input value={ncName} onChange={(e) => setNcName(e.target.value)} placeholder="e.g. multimodal pipelines" className={`${input} mb-[18px]`} />
-
-          <label className={`block ${label.replace("mb-3", "mb-[9px]")}`}>Signal color</label>
-          <div className="mb-[18px] flex gap-[9px]">
-            {COLOR_OPTS.map((h) => (
-              <button
-                key={h}
-                onClick={() => setNcHue(h)}
-                aria-label="Pick color"
-                className="h-[26px] w-[26px] rounded-lg"
-                style={{
-                  background: `oklch(0.78 0.15 ${h})`,
-                  border: ncHue === h ? "2px solid #04070d" : "2px solid transparent",
-                  boxShadow: ncHue === h ? `0 0 0 2px oklch(0.78 0.15 ${h}), 0 0 12px oklch(0.78 0.15 ${h})` : "none",
-                }}
-              />
-            ))}
-          </div>
-
-          <label className={`block ${label.replace("mb-3", "mb-[7px]")}`}>Seed keywords</label>
-          <input
-            value={ncKeywords}
-            onChange={(e) => setNcKeywords(e.target.value)}
-            placeholder="vision, image, audio, multimodal"
-            className={`${input} mb-1.5 font-mono`}
-          />
-          <div className="mb-4 text-[11px] text-[#4d6f86]">Comma or space separated.</div>
-
-          <div className="mb-[18px] rounded-xl border border-[rgba(116,224,255,0.12)] bg-[rgba(116,224,255,0.03)] p-3.5">
-            <div className="mb-2.5 flex items-baseline gap-2">
-              <span className="text-2xl font-semibold" style={{ color: previewColor, textShadow: `0 0 16px ${previewColor}` }}>
-                {matched.length}
-              </span>
-              <span className="text-[12.5px] text-[#5f8299]">of {nodes.length} contacts match</span>
-            </div>
-            {matched.length > 0 ? (
-              <ul className="flex list-none flex-wrap gap-1.5">
-                {matched.slice(0, 6).map((n) => (
-                  <li key={n.slug} className="rounded-full border border-[rgba(116,224,255,0.16)] px-[9px] py-[3px] font-mono text-[10.5px] text-[#93b4c9]">
-                    {n.owner}/{n.name}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="text-xs text-[#4d6f86]">Add keywords to preview matching contacts.</div>
+        <div>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-[14px] font-semibold text-[#eaf7ff]">Cluster profiles</h3>
+            {visibility.hiddenCount > 0 && (
+              <button onClick={visibility.showAll} className="font-mono text-[11px] text-[#74e0ff] transition-colors hover:text-[#a6ecff]">
+                show all ({visibility.hiddenCount} hidden)
+              </button>
             )}
           </div>
-
-          <button
-            onClick={create}
-            disabled={!canCreate}
-            className="w-full rounded-[11px] py-[11px] text-sm font-semibold tracking-[0.02em] text-[#03121a]"
-            style={{
-              background: canCreate ? ACCENT : "rgba(116,224,255,0.16)",
-              boxShadow: canCreate ? "0 0 26px rgba(116,224,255,0.4)" : "none",
-              cursor: canCreate ? "pointer" : "not-allowed",
-            }}
-          >
-            Create candidate cluster
-          </button>
+          {ordered.length === 0 ? (
+            <div className="rounded-2xl border border-[rgba(116,224,255,0.13)] bg-[rgba(8,16,26,0.55)] px-6 py-12 text-center">
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#74e0ff]">no clusters yet</div>
+              <div className="mt-2 text-sm text-[#93b4c9]">
+                The map needs enough tracked tools before territories emerge. Lower the minimum in Configuration to
+                cluster sooner.
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3.5">
+              {ordered.map((c) => (
+                <ProfileCard
+                  key={c.slug}
+                  cluster={c}
+                  members={membersBySlug.get(c.slug) ?? []}
+                  hidden={!visibility.isVisible(c.slug)}
+                  onToggle={() => visibility.toggle(c.slug)}
+                  onSolo={() => visibility.solo(c.slug, allSlugs)}
+                  onPick={onPick}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

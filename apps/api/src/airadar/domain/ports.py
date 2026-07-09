@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Protocol
 
 from airadar.domain.model.cluster import Cluster
 from airadar.domain.model.position import Position3D
+from airadar.domain.model.radar_settings import RadarSettings
 from airadar.domain.model.repo_ref import RepoRef
 from airadar.domain.model.tool import Tool
 
@@ -39,11 +40,24 @@ class Projector(Protocol):
 
 
 class Clusterer(Protocol):
-    def assign(self, embeddings: list[list[float]]) -> list[int]: ...
+    def assign(
+        self, embeddings: list[list[float]], min_cluster_size: int | None = None
+    ) -> list[int]: ...
 
 
 class ClusterLabeler(Protocol):
     def label(self, docs_by_cluster: dict[int, list[str]]) -> dict[int, str]: ...
+
+    def profile(
+        self, docs_by_cluster: dict[int, list[str]]
+    ) -> "dict[int, tuple[str, list[str]]]":
+        """Return per-cluster (label, keywords) — keywords are the top c-TF-IDF terms."""
+        ...
+
+
+class SettingsRepository(Protocol):
+    def get(self) -> RadarSettings: ...
+    def update(self, **fields) -> RadarSettings: ...
 
 
 class UpdateBroadcaster(Protocol):

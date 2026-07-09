@@ -10,14 +10,17 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
 from airadar.application.queries import GetLandscape, GetTool, ListClusters, ListTools
+from airadar.application.settings import GetSettings, UpdateSettings
 from airadar.config import Settings
 from airadar.infrastructure.broadcast import AsyncFanoutBroadcaster
 from airadar.infrastructure.persistence.database import DatabasePing, make_engine
 from airadar.infrastructure.persistence.repositories import (
     SqlClusterRepository,
+    SqlSettingsRepository,
     SqlToolRepository,
 )
-from airadar.infrastructure.pgnotify import PgNotifyListener
+from airadar.infrastructure.pgnotify import CONFIG_CHANNEL, PgNotifyListener, PgNotifyPublisher
+from airadar.infrastructure.sources.presets import load_presets
 from airadar.interface.container import Container, RadarStatus
 from airadar.interface.http import create_app
 from airadar.runtime import configure_logging, logger
@@ -27,8 +30,21 @@ def build_container(settings: Settings) -> tuple[Container, PgNotifyListener]:
     engine = make_engine(settings.database_url)
     tools = SqlToolRepository(engine)
     clusters = SqlClusterRepository(engine)
+    settings_repo = SqlSettingsRepository(engine)
     broadcaster = AsyncFanoutBroadcaster()
     status = RadarStatus()
+
+    presets = load_presets()
+    get_settings = GetSettings(
+        settings_repo,
+        presets,
+        default_min_cluster_size=settings.min_cluster_size,
+        default_min_tools=settings.min_tools_for_clustering,
+    )
+    # The api doesn't recompute; it just signals the worker via a NOTIFY on the
+    # config channel (the worker LISTENs and does the ingest+recompute).
+    config_publisher = PgNotifyPublisher(settings.database_url, channel=CONFIG_CHANNEL)
+    update_settings = UpdateSettings(settings_repo, presets, get_settings, config_publisher)
 
     container = Container(
         get_landscape=GetLandscape(tools, clusters),
@@ -38,6 +54,9 @@ def build_container(settings: Settings) -> tuple[Container, PgNotifyListener]:
         tools=tools,
         clusters=clusters,
         broadcaster=broadcaster,
+        settings=settings_repo,
+        get_settings=get_settings,
+        update_settings=update_settings,
         status=status,
         db_ping=DatabasePing(engine),
     )

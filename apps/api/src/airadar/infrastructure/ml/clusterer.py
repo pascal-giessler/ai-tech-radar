@@ -13,7 +13,10 @@ class HdbscanClusterer:
         self._min_cluster_size = min_cluster_size
         self._random_state = random_state
 
-    def assign(self, embeddings: list[list[float]]) -> list[int]:
+    def assign(
+        self, embeddings: list[list[float]], min_cluster_size: int | None = None
+    ) -> list[int]:
+        effective_mcs = min_cluster_size if min_cluster_size is not None else self._min_cluster_size
         data = np.asarray(embeddings, dtype=np.float32)
         if data.shape[1] > REDUCE_THRESHOLD_DIM and data.shape[0] >= MIN_SAMPLES_FOR_REDUCTION:
             import umap  # heavy import deferred to first use
@@ -26,5 +29,5 @@ class HdbscanClusterer:
                 random_state=self._random_state,
             ).fit_transform(data)
 
-        model = HDBSCAN(min_cluster_size=self._min_cluster_size, copy=True)
+        model = HDBSCAN(min_cluster_size=effective_mcs, copy=True)
         return [int(label) for label in model.fit_predict(np.asarray(data))]

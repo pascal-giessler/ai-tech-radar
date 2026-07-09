@@ -27,10 +27,18 @@ class Tool:
     cluster_id: int | None = None
     embedding: list[float] | None = None
     embedded_fingerprint: str | None = field(default=None)
+    open_issues: int = 0
+    # Weekly commit counts, most-recent-last, up to ~12 entries. Empty when the
+    # GitHub stats endpoint is unavailable (202/rate-limit/no token) — never blocks.
+    commit_activity: list[float] = field(default_factory=list)
 
     @property
     def slug(self) -> str:
         return self.ref.slug
+
+    @property
+    def commits_recent(self) -> int:
+        return int(sum(self.commit_activity))
 
     @property
     def stars_gained(self) -> int:

@@ -6,9 +6,15 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from airadar.domain.model.adoption import AdoptionRing
 from airadar.domain.model.cluster import Cluster
 from airadar.domain.model.position import Position3D
+from airadar.domain.model.radar_settings import RadarSettings
 from airadar.domain.model.repo_ref import RepoRef
 from airadar.domain.model.tool import Tool
-from airadar.infrastructure.persistence.orm import clusters_table, tools_table
+from airadar.infrastructure.persistence.orm import (
+    SETTINGS_ROW_ID,
+    clusters_table,
+    radar_settings_table,
+    tools_table,
+)
 
 
 def _tool_to_row(tool: Tool) -> dict:
@@ -33,6 +39,8 @@ def _tool_to_row(tool: Tool) -> dict:
         "cluster_id": tool.cluster_id,
         "embedding": tool.embedding,
         "embedded_fingerprint": tool.embedded_fingerprint,
+        "open_issues": tool.open_issues,
+        "commit_activity": tool.commit_activity,
     }
 
 
@@ -57,6 +65,8 @@ def _row_to_tool(row) -> Tool:
         cluster_id=row.cluster_id,
         embedding=list(row.embedding) if row.embedding is not None else None,
         embedded_fingerprint=row.embedded_fingerprint,
+        open_issues=row.open_issues if row.open_issues is not None else 0,
+        commit_activity=list(row.commit_activity or []),
     )
 
 
@@ -119,6 +129,8 @@ class SqlClusterRepository:
                             "centroid_x": c.centroid.x,
                             "centroid_y": c.centroid.y,
                             "centroid_z": c.centroid.z,
+                            "keywords": c.keywords,
+                            "description": c.description,
                         }
                         for c in clusters
                     ],
@@ -146,4 +158,40 @@ class SqlClusterRepository:
             slug=row.slug,
             size=row.size,
             centroid=Position3D(row.centroid_x, row.centroid_y, row.centroid_z),
+            keywords=list(row.keywords or []),
+            description=row.description or "",
         )
+
+
+class SqlSettingsRepository:
+    """Single-row (id = SETTINGS_ROW_ID) settings; falls back to defaults if absent."""
+
+    def __init__(self, engine: Engine) -> None:
+        self._engine = engine
+
+    def get(self) -> RadarSettings:
+        with self._engine.connect() as conn:
+            row = conn.execute(
+                select(radar_settings_table).where(
+                    radar_settings_table.c.id == SETTINGS_ROW_ID
+                )
+            ).first()
+        if row is None:
+            return RadarSettings()
+        return RadarSettings(
+            area_preset=row.area_preset,
+            min_cluster_size=row.min_cluster_size,
+            min_tools=row.min_tools,
+        )
+
+    def update(self, **fields) -> RadarSettings:
+        allowed = {"area_preset", "min_cluster_size", "min_tools"}
+        values = {k: v for k, v in fields.items() if k in allowed}
+        with self._engine.begin() as conn:
+            stmt = pg_insert(radar_settings_table).values(id=SETTINGS_ROW_ID, **values)
+            stmt = stmt.on_conflict_do_update(
+                index_elements=[radar_settings_table.c.id],
+                set_=values or {"id": SETTINGS_ROW_ID},
+            )
+            conn.execute(stmt)
+        return self.get()

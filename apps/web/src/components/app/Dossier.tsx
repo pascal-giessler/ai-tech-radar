@@ -10,6 +10,8 @@ import {
   type ScopeNode,
 } from "@/lib/cinematic";
 
+import { ActivityBars, RingPill } from "./signals";
+
 function sparkPoints(node: ScopeNode, W: number, H: number, top: number) {
   const ST = STEPS - 1;
   return node.hist.map((p, i) => `${((i / ST) * W).toFixed(1)},${(H - (p.score / 100) * (H - top)).toFixed(1)}`);
@@ -54,17 +56,20 @@ export function DetailPanel({
         </button>
       </div>
 
-      <div
-        className="mt-3.5 inline-flex items-center gap-[7px] rounded-full px-[11px] py-1 font-mono text-[10px] uppercase tracking-[0.1em]"
-        style={{ background: TIER_BG[node.tier], color: TIER_COLOR[node.tier] }}
-      >
-        <span className="h-1.5 w-1.5 rounded-full" style={{ background: TIER_COLOR[node.tier], boxShadow: `0 0 8px ${TIER_COLOR[node.tier]}` }} />
-        {node.tier}
+      <div className="mt-3.5 flex flex-wrap items-center gap-2">
+        <RingPill ring={node.ring} size="md" />
+        <span
+          className="inline-flex items-center gap-[7px] rounded-full px-[11px] py-1 font-mono text-[10px] uppercase tracking-[0.1em]"
+          style={{ background: TIER_BG[node.tier], color: TIER_COLOR[node.tier] }}
+        >
+          <span className="h-1.5 w-1.5 rounded-full" style={{ background: TIER_COLOR[node.tier] }} />
+          {node.tier}
+        </span>
       </div>
 
       <p className="mt-3.5 text-sm leading-[1.58] text-[#93b4c9]">{node.description}</p>
 
-      <dl className="my-4 grid grid-cols-3 gap-2 border-y border-[rgba(116,224,255,0.12)] py-[15px] font-mono text-xs">
+      <dl className="my-4 grid grid-cols-4 gap-2 border-y border-[rgba(116,224,255,0.12)] py-[15px] font-mono text-xs">
         <div>
           <dt className="text-[#5f8299]">stars</dt>
           <dd className="mt-[5px] text-[#e2f3ff]">★ {formatStars(node.stars)}</dd>
@@ -74,10 +79,23 @@ export function DetailPanel({
           <dd className="mt-[5px] text-[#57e0a8]">{node.gained > 0 ? "+" + formatStars(node.gained) : "—"}</dd>
         </div>
         <div>
+          <dt className="text-[#5f8299]">issues</dt>
+          <dd className="mt-[5px] text-[#e2f3ff]">{formatStars(node.openIssues)}</dd>
+        </div>
+        <div>
           <dt className="text-[#5f8299]">score</dt>
           <dd className="mt-[5px] text-[#e2f3ff]">{node.score}</dd>
         </div>
       </dl>
+
+      {node.commitActivity.length > 0 && (
+        <div className="mb-4">
+          <div className="mb-2 font-mono text-[9.5px] uppercase tracking-[0.12em] text-[#5f8299]">
+            commits / week · last {Math.min(12, node.commitActivity.length)}w (real)
+          </div>
+          <ActivityBars weeks={node.commitActivity} height={26} />
+        </div>
+      )}
 
       <div className="mb-4">
         <div className="mb-2 flex items-baseline justify-between font-mono text-[9.5px] uppercase tracking-[0.12em] text-[#5f8299]">
@@ -165,6 +183,7 @@ export function FullDossier({ node, nodes, onClose, onPick }: { node: ScopeNode;
             <span className="h-[9px] w-[9px] rounded-[2px]" style={{ background: catColor, boxShadow: `0 0 8px ${catColor}` }} />
             {node.clusterLabel}
           </span>
+          <RingPill ring={node.ring} size="md" />
           <span
             className="inline-flex items-center gap-[7px] rounded-full px-3 py-[5px] font-mono text-[10.5px] uppercase tracking-[0.1em]"
             style={{ background: TIER_BG[node.tier], color: TIER_COLOR[node.tier] }}
@@ -208,6 +227,17 @@ export function FullDossier({ node, nodes, onClose, onPick }: { node: ScopeNode;
                 <polyline points={`0,120 ${starPts.join(" ")} 640,120`} fill="#57e0a8" style={{ fillOpacity: 0.1, stroke: "none" }} />
                 <polyline points={starPts.join(" ")} fill="none" stroke="#57e0a8" style={{ strokeWidth: "2px", strokeLinejoin: "round" }} />
               </svg>
+            </div>
+            <div className="rounded-2xl border border-[rgba(116,224,255,0.13)] bg-[rgba(8,16,26,0.55)] p-5">
+              <div className="mb-3 flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.12em] text-[#5f8299]">
+                <span>Maintenance · commits/week (real)</span>
+                <span>{formatStars(node.openIssues)} open issues</span>
+              </div>
+              {node.commitActivity.length > 0 ? (
+                <ActivityBars weeks={node.commitActivity} count={12} height={44} />
+              ) : (
+                <div className="text-[12px] text-[#4d6f86]">No commit-activity data available from GitHub for this repo.</div>
+              )}
             </div>
           </div>
 

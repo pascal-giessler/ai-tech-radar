@@ -3,11 +3,19 @@ from datetime import UTC, datetime
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from airadar.application.queries import tool_summary
+from airadar.application.settings import SettingsValidationError
 from airadar.domain.model.adoption import AdoptionRing
 from airadar.interface.container import Container
+
+
+class SettingsPatch(BaseModel):
+    area_preset: str | None = None
+    min_cluster_size: int | None = None
+    min_tools: int | None = None
 
 
 def create_app(container: Container, lifespan=None) -> FastAPI:
@@ -76,9 +84,26 @@ def create_app(container: Container, lifespan=None) -> FastAPI:
                     "y": found.centroid.y,
                     "z": found.centroid.z,
                 },
+                "keywords": found.keywords,
+                "description": found.description,
             },
             "tools": members,
         }
+
+    @app.get("/api/settings")
+    def get_settings() -> dict:
+        if container.get_settings is None:
+            raise HTTPException(status_code=503, detail="settings unavailable")
+        return container.get_settings.execute()
+
+    @app.patch("/api/settings")
+    def patch_settings(patch: SettingsPatch) -> dict:
+        if container.update_settings is None:
+            raise HTTPException(status_code=503, detail="settings unavailable")
+        try:
+            return container.update_settings.execute(patch.model_dump(exclude_unset=True))
+        except SettingsValidationError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @app.get("/api/events")
     async def events() -> EventSourceResponse:

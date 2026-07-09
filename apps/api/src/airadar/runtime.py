@@ -1,6 +1,7 @@
 """Shared composition for the write-side runtimes (worker, migrate)."""
 
 import logging
+import threading
 import time
 from datetime import UTC, datetime
 
@@ -19,10 +20,12 @@ from airadar.infrastructure.ml.projector import UmapProjector
 from airadar.infrastructure.persistence.database import init_db, make_engine
 from airadar.infrastructure.persistence.repositories import (
     SqlClusterRepository,
+    SqlSettingsRepository,
     SqlToolRepository,
 )
 from airadar.infrastructure.pgnotify import PgNotifyPublisher
 from airadar.infrastructure.sources.composite import CompositeToolSource
+from airadar.infrastructure.sources.presets import get_preset
 from airadar.infrastructure.sources.seed import SeedToolSource
 
 logger = logging.getLogger("airadar")
@@ -56,24 +59,73 @@ def init_db_with_retry(engine, attempts: int = 30, base_delay: float = 1.0) -> N
 
 
 class RefreshJob:
-    """The write pipeline: ingest → recompute → publish. Never raises."""
+    """The write pipeline: read settings → ingest → recompute → publish. Never raises.
 
-    def __init__(self, engine, ingest, recompute, clock: SystemClock):
+    Reads `radar_settings` at the start of every run, so a config change (scheduled
+    tick or `radar_config_changed` NOTIFY) takes effect immediately. A non-blocking
+    lock enforces `max_instances=1` semantics across the scheduler and the LISTEN
+    trigger — an overlapping trigger is skipped rather than run concurrently.
+    """
+
+    def __init__(
+        self,
+        engine,
+        ingest,
+        recompute,
+        clock: SystemClock,
+        settings_repo,
+        github_source: GithubToolSource,
+        default_min_cluster_size: int,
+        default_min_tools: int,
+    ):
         self.engine = engine
         self._ingest = ingest
         self._recompute = recompute
         self._clock = clock
+        self._settings_repo = settings_repo
+        self._github_source = github_source
+        self._default_min_cluster_size = default_min_cluster_size
+        self._default_min_tools = default_min_tools
+        self._lock = threading.Lock()
 
     def run_sync(self) -> None:
+        if not self._lock.acquire(blocking=False):
+            logger.info("refresh already running; skipping overlapping trigger")
+            return
         try:
-            report = self._ingest.execute()
-            logger.info("ingest: %s new, %s updated", report.new, report.updated)
-            landscape = self._recompute.execute()
-            logger.info(
-                "landscape: %s tools in %s clusters", landscape.tool_count, landscape.cluster_count
-            )
+            self._apply_settings()
         except Exception:
             logger.exception("refresh failed; serving last known landscape")
+        finally:
+            self._lock.release()
+
+    def _apply_settings(self) -> None:
+        row = self._settings_repo.get()
+        min_cluster_size = (
+            row.min_cluster_size
+            if row.min_cluster_size is not None
+            else self._default_min_cluster_size
+        )
+        min_tools = row.min_tools if row.min_tools is not None else self._default_min_tools
+        try:
+            preset = get_preset(row.area_preset)
+            self._github_source.set_topics(preset.topics)
+            logger.info("active area preset: %s (%s topics)", preset.slug, len(preset.topics))
+        except KeyError:
+            logger.warning("unknown area preset %r; keeping current topics", row.area_preset)
+
+        report = self._ingest.execute()
+        logger.info("ingest: %s new, %s updated", report.new, report.updated)
+        landscape = self._recompute.execute(
+            min_cluster_size=min_cluster_size, min_tools=min_tools
+        )
+        logger.info(
+            "landscape: %s tools in %s clusters (min_cluster_size=%s, min_tools=%s)",
+            landscape.tool_count,
+            landscape.cluster_count,
+            min_cluster_size,
+            min_tools,
+        )
 
 
 def build_refresh_job(settings: Settings) -> RefreshJob:
@@ -81,10 +133,10 @@ def build_refresh_job(settings: Settings) -> RefreshJob:
     engine = make_engine(settings.database_url)
     tools = SqlToolRepository(engine)
     clusters = SqlClusterRepository(engine)
+    settings_repo = SqlSettingsRepository(engine)
 
-    source = CompositeToolSource(
-        [SeedToolSource(), GithubToolSource(token=settings.github_token)]
-    )
+    github_source = GithubToolSource(token=settings.github_token)
+    source = CompositeToolSource([SeedToolSource(), github_source])
     ingest = IngestTrendingTools(
         source=source,
         tools=tools,
@@ -101,5 +153,15 @@ def build_refresh_job(settings: Settings) -> RefreshJob:
         labeler=CTfidfLabeler(),
         broadcaster=PgNotifyPublisher(settings.database_url),
         min_tools=settings.min_tools_for_clustering,
+        min_cluster_size=settings.min_cluster_size,
     )
-    return RefreshJob(engine=engine, ingest=ingest, recompute=recompute, clock=SystemClock())
+    return RefreshJob(
+        engine=engine,
+        ingest=ingest,
+        recompute=recompute,
+        clock=SystemClock(),
+        settings_repo=settings_repo,
+        github_source=github_source,
+        default_min_cluster_size=settings.min_cluster_size,
+        default_min_tools=settings.min_tools_for_clustering,
+    )

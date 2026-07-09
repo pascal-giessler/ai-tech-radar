@@ -29,6 +29,14 @@ export function buildLlmsTxt(data: LandscapeData, siteUrl: string): string {
   for (const cluster of data.clusters) {
     lines.push(`## ${cluster.label}`);
     lines.push("");
+    if (cluster.description) {
+      lines.push(`> ${cluster.description}`);
+      lines.push("");
+    }
+    if (cluster.keywords.length > 0) {
+      lines.push(`Keywords: ${cluster.keywords.join(", ")}`);
+      lines.push("");
+    }
     const members = (byCluster.get(cluster.id) ?? []).sort(
       (a, b) => b.trend_score - a.trend_score,
     );

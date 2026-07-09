@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from airadar.application.dto import DiscoveredTool
 from airadar.domain.model.cluster import Cluster
 from airadar.domain.model.position import Position3D
+from airadar.domain.model.radar_settings import RadarSettings
 from airadar.domain.model.repo_ref import RepoRef
 from airadar.domain.model.tool import Tool
 
@@ -83,13 +84,21 @@ class GridProjector:
 
 
 class ModuloClusterer:
-    """Assigns item i to cluster i % n; item 0 becomes noise when noise=True."""
+    """Assigns item i to cluster i % n; item 0 becomes noise when noise=True.
+
+    Records the last `min_cluster_size` it was called with, so tests can assert the
+    configured value is threaded through from settings.
+    """
 
     def __init__(self, n: int = 2, noise: bool = False) -> None:
         self.n = n
         self.noise = noise
+        self.last_min_cluster_size: int | None = None
 
-    def assign(self, embeddings: list[list[float]]) -> list[int]:
+    def assign(
+        self, embeddings: list[list[float]], min_cluster_size: int | None = None
+    ) -> list[int]:
+        self.last_min_cluster_size = min_cluster_size
         labels = [i % self.n for i in range(len(embeddings))]
         if self.noise and labels:
             labels[0] = -1
@@ -98,7 +107,34 @@ class ModuloClusterer:
 
 class KeywordLabeler:
     def label(self, docs_by_cluster: dict[int, list[str]]) -> dict[int, str]:
-        return {cid: f"Cluster {cid}" for cid in docs_by_cluster}
+        return {cid: label for cid, (label, _kw) in self.profile(docs_by_cluster).items()}
+
+    def profile(
+        self, docs_by_cluster: dict[int, list[str]]
+    ) -> dict[int, tuple[str, list[str]]]:
+        return {
+            cid: (f"Cluster {cid}", [f"kw{cid}a", f"kw{cid}b", f"kw{cid}c"])
+            for cid in docs_by_cluster
+        }
+
+
+class InMemorySettingsRepository:
+    def __init__(self, settings: RadarSettings | None = None) -> None:
+        self._settings = settings or RadarSettings()
+
+    def get(self) -> RadarSettings:
+        return self._settings
+
+    def update(self, **fields) -> RadarSettings:
+        allowed = {"area_preset", "min_cluster_size", "min_tools"}
+        current = {
+            "area_preset": self._settings.area_preset,
+            "min_cluster_size": self._settings.min_cluster_size,
+            "min_tools": self._settings.min_tools,
+        }
+        current.update({k: v for k, v in fields.items() if k in allowed})
+        self._settings = RadarSettings(**current)
+        return self._settings
 
 
 class RecordingBroadcaster:
@@ -126,6 +162,8 @@ def discovered(
     stars: int = 500,
     url: str | None = None,
     repo_created_at: datetime | None = None,
+    open_issues: int = 0,
+    commit_activity: list[int] | None = None,
 ) -> DiscoveredTool:
     return DiscoveredTool(
         owner=owner,
@@ -136,4 +174,6 @@ def discovered(
         stars=stars,
         url=url or f"https://github.com/{owner}/{name}",
         repo_created_at=repo_created_at or datetime(2026, 6, 1, tzinfo=UTC),
+        open_issues=open_issues,
+        commit_activity=commit_activity if commit_activity is not None else [],
     )
