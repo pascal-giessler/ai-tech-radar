@@ -266,7 +266,7 @@ apps/api            FastAPI backend (domain / application / infrastructure / int
 apps/web            Next.js frontend (app shell, radar canvas, records, clusters, dossiers)
 deploy/k8s          Kustomize manifests (base + overlays/prod)
 docker-compose.yml  local full stack: db · migrate · api · worker · web
-docs/superpowers    design specs and implementation plans
+docs/assets         logo and screenshots
 .github/workflows   CI/CD pipeline
 ```
 
