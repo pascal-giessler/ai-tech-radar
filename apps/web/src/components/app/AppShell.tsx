@@ -71,6 +71,7 @@ export function AppShell({ initial }: { initial: LandscapeData }) {
   const [data, setData] = useState(initial);
   const [view, setView] = useState<View>("overview");
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileNav, setMobileNav] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [isolated, setIsolated] = useState<string | null>(null);
@@ -214,10 +215,16 @@ export function AppShell({ initial }: { initial: LandscapeData }) {
       className="flex h-dvh w-full overflow-hidden"
       style={{ background: "radial-gradient(120% 95% at 50% 28%, #0a1626 0%, #060c16 55%, #03060c 100%)" }}
     >
+      {/* mobile drawer backdrop */}
+      {mobileNav && (
+        <div className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px] md:hidden" onClick={() => setMobileNav(false)} />
+      )}
+
       {/* ============ SIDEBAR ============ */}
       <aside
-        className="flex flex-none flex-col overflow-hidden border-r border-[rgba(116,224,255,0.12)] bg-[rgba(7,14,24,0.72)] backdrop-blur-[22px] transition-[width] duration-300"
-        style={{ width: collapsed ? 70 : 252 }}
+        className={`fixed inset-y-0 left-0 z-50 flex w-[252px] flex-none flex-col overflow-hidden border-r border-[rgba(116,224,255,0.12)] bg-[rgba(7,14,24,0.92)] backdrop-blur-[22px] transition-[width,transform] duration-300 md:static md:z-auto md:translate-x-0 md:bg-[rgba(7,14,24,0.72)] ${
+          mobileNav ? "translate-x-0" : "-translate-x-full"
+        } ${collapsed ? "md:w-[70px]" : "md:w-[252px]"}`}
       >
         <div className="flex h-16 flex-none items-center gap-3 border-b border-[rgba(116,224,255,0.1)] px-[18px]">
           <span className="relative h-[30px] w-[30px] flex-none">
@@ -242,6 +249,7 @@ export function AppShell({ initial }: { initial: LandscapeData }) {
                 onClick={() => {
                   setView(key);
                   setDossierSlug(null);
+                  setMobileNav(false);
                 }}
                 className="relative flex w-full items-center rounded-[11px] text-left text-sm transition-colors"
                 style={{
@@ -336,10 +344,21 @@ export function AppShell({ initial }: { initial: LandscapeData }) {
 
       {/* ============ MAIN ============ */}
       <section className="relative flex min-w-0 flex-1 flex-col">
-        <header className="z-20 flex h-[66px] flex-none items-center gap-5 border-b border-[rgba(116,224,255,0.1)] bg-[rgba(6,12,20,0.62)] px-6 backdrop-blur-[24px]">
-          <div className="max-w-[32%] flex-none">
+        <header className="z-20 flex h-[66px] flex-none items-center gap-3 border-b border-[rgba(116,224,255,0.1)] bg-[rgba(6,12,20,0.62)] px-4 backdrop-blur-[24px] md:gap-5 md:px-6">
+          <button
+            aria-label="Open navigation"
+            onClick={() => setMobileNav(true)}
+            className="flex h-9 w-9 flex-none items-center justify-center rounded-lg border border-[rgba(116,224,255,0.16)] text-[#93b4c9] md:hidden"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+          <div className="hidden max-w-[32%] flex-none sm:block">
             <div className="text-base font-semibold tracking-[0.005em] text-[#eaf7ff]">{VIEW_META[view][0]}</div>
-            <div className="mt-px truncate text-[11.5px] text-[#5f8299]">{VIEW_META[view][1]}</div>
+            <div className="mt-px hidden truncate text-[11.5px] text-[#5f8299] md:block">{VIEW_META[view][1]}</div>
           </div>
 
           <div className="relative mx-auto max-w-[460px] flex-1">
@@ -388,9 +407,9 @@ export function AppShell({ initial }: { initial: LandscapeData }) {
             )}
           </div>
 
-          <div className="flex flex-none items-center gap-3">
+          <div className="flex flex-none items-center gap-2 md:gap-3">
             {view === "radar" && (
-              <div className="inline-flex items-center gap-0.5 rounded-[11px] border border-[rgba(116,224,255,0.14)] bg-[rgba(9,18,30,0.55)] p-[3px]">
+              <div className="hidden items-center gap-0.5 rounded-[11px] border border-[rgba(116,224,255,0.14)] bg-[rgba(9,18,30,0.55)] p-[3px] sm:inline-flex">
                 {[
                   { k: false, label: "Top-down" },
                   { k: true, label: "Perspective" },
@@ -410,7 +429,7 @@ export function AppShell({ initial }: { initial: LandscapeData }) {
               </div>
             )}
             <AreaSelector controller={settings} />
-            <div className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-[rgba(116,224,255,0.14)] bg-[rgba(9,18,30,0.5)] px-3 py-[7px] font-mono text-[10px] tracking-[0.08em] text-[#5f8299]">
+            <div className="hidden items-center gap-2 whitespace-nowrap rounded-full border border-[rgba(116,224,255,0.14)] bg-[rgba(9,18,30,0.5)] px-3 py-[7px] font-mono text-[10px] tracking-[0.08em] text-[#5f8299] sm:inline-flex">
               <span className="live-dot h-1.5 w-1.5 rounded-full" style={{ background: LIVE, boxShadow: `0 0 8px ${LIVE}` }} />
               LIVE · {scanTime}
             </div>
