@@ -23,6 +23,7 @@ export interface Tool {
   url: string;
   position: Position3D | null;
   cluster_id: number | null;
+  first_seen_at: string;
 }
 
 export interface ToolDetail extends Tool {

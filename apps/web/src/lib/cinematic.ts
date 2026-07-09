@@ -142,6 +142,8 @@ export interface ScopeNode {
   /** Real weekly commit counts, most-recent-last (up to ~12w); empty when unavailable. */
   commitActivity: number[];
   commitsRecent: number;
+  /** ISO timestamp the tool was first discovered — powers "new entrants". */
+  firstSeen: string;
 }
 export interface ScopeCluster {
   id: number;
@@ -247,6 +249,7 @@ export function buildModel(tools: Tool[], clusters: Cluster[]): ScopeModel {
       openIssues: t.open_issues ?? 0,
       commitActivity,
       commitsRecent: commitActivity.reduce((a, b) => a + b, 0),
+      firstSeen: t.first_seen_at ?? "",
     };
   });
 

@@ -28,6 +28,7 @@ def tool_summary(tool: Tool) -> dict:
         "cluster_id": tool.cluster_id,
         "open_issues": tool.open_issues,
         "commit_activity": tool.commit_activity,
+        "first_seen_at": tool.first_seen_at.isoformat(),
     }
 
 
