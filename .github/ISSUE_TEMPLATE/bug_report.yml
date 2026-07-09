@@ -1,0 +1,46 @@
+name: Bug report
+description: Something is broken or behaving unexpectedly
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, plus what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. docker compose up --build
+        2. Open the Clusters view
+        3. …
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Which part is affected?
+      options:
+        - Web UI
+        - API / backend
+        - Worker / ingestion & clustering
+        - Docker / Compose
+        - Kubernetes manifests
+        - Docs
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "OS, browser, Docker version, GITHUB_TOKEN set? (never paste the token itself)"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: "`docker compose logs api worker` output, browser console errors, etc."
+      render: shell

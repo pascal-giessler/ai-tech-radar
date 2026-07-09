@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest an idea or improvement
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the need, not just the solution — it helps find the best design.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What you'd like to happen. Sketches, examples, and links welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: kind
+    attributes:
+      label: Is this about…
+      options:
+        - label: A new radar area preset (see CONTRIBUTING.md — small PRs welcome!)
+        - label: The visualisation / UI
+        - label: Ingestion, scoring, or clustering
+        - label: Deployment / operations
