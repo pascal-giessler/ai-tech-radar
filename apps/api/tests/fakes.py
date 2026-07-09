@@ -143,6 +143,24 @@ class InMemorySettingsRepository:
         return self._settings
 
 
+class InMemoryPresetRepository:
+    """Holds user-added areas for fast tests (bundled presets stay in code)."""
+
+    def __init__(self) -> None:
+        from airadar.infrastructure.sources.presets import Preset
+
+        self._preset_cls = Preset
+        self._by_slug: dict[str, object] = {}
+
+    def list_all(self) -> list:
+        return list(self._by_slug.values())
+
+    def add(self, slug: str, title: str, topics: list[str], seed_file: str | None = None) -> None:
+        self._by_slug[slug] = self._preset_cls(
+            slug=slug, title=title, topics=list(topics), seed_file=seed_file
+        )
+
+
 class RecordingBroadcaster:
     def __init__(self) -> None:
         self.events: list[dict] = []

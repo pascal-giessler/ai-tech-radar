@@ -1,14 +1,20 @@
 import pytest
 
 from airadar.application.settings import (
+    AddCustomArea,
     GetSettings,
     SettingsValidationError,
     UpdateSettings,
+    slugify,
 )
 from airadar.domain.model.radar_settings import RadarSettings
-from airadar.infrastructure.sources.presets import get_preset, load_presets
+from airadar.infrastructure.sources.presets import get_preset, load_presets, merge_presets
 
-from tests.fakes import InMemorySettingsRepository, RecordingBroadcaster
+from tests.fakes import (
+    InMemoryPresetRepository,
+    InMemorySettingsRepository,
+    RecordingBroadcaster,
+)
 
 
 def make_get(repo: InMemorySettingsRepository) -> GetSettings:
@@ -85,3 +91,72 @@ def test_presets_resolve_topics() -> None:
     assert ai.topics == ["llm", "ai-agents", "developer-tools", "mcp", "rag", "llmops"]
     with pytest.raises(KeyError):
         get_preset("does-not-exist")
+
+
+# --- custom areas ---
+
+
+def make_add(
+    repo: InMemoryPresetRepository,
+) -> tuple[AddCustomArea, GetSettings, InMemorySettingsRepository]:
+    settings_repo = InMemorySettingsRepository(RadarSettings())
+    provider = lambda: merge_presets(repo.list_all())  # noqa: E731
+    get = GetSettings(settings_repo, provider, default_min_cluster_size=4, default_min_tools=12)
+    return AddCustomArea(provider, repo, get), get, settings_repo
+
+
+def test_slugify_kebabs_titles() -> None:
+    assert slugify("Data Engineering!") == "data-engineering"
+    assert slugify("  Web3 / DeFi  ") == "web3-defi"
+    assert slugify("###") == ""
+
+
+def test_add_custom_area_persists_and_appears_in_settings() -> None:
+    repo = InMemoryPresetRepository()
+    add, get, _ = make_add(repo)
+
+    created = add.execute(title="Data Engineering", topics=["data-engineering", "etl", "spark"])
+
+    assert created["slug"] == "data-engineering"
+    slugs = {p["slug"] for p in get.execute()["presets"]}
+    assert "data-engineering" in slugs
+    assert slugs >= {"ai", "rust", "platform"}  # bundled still present
+
+
+def test_add_custom_area_normalises_topics() -> None:
+    repo = InMemoryPresetRepository()
+    add, _, _ = make_add(repo)
+    created = add.execute(title="Game Dev", topics=["Game Engine", " ", "game-engine", "Unity"])
+    # slugified, de-duplicated, blanks dropped
+    assert created["topics"] == ["game-engine", "unity"]
+
+
+@pytest.mark.parametrize(
+    "title,topics",
+    [
+        ("", ["x"]),  # empty title
+        ("###", ["x"]),  # slug empty
+        ("Valid", []),  # no topics
+        ("Valid", ["   "]),  # only-blank topics
+    ],
+)
+def test_add_custom_area_rejects_bad_input(title, topics) -> None:
+    add, _, _ = make_add(InMemoryPresetRepository())
+    with pytest.raises(SettingsValidationError):
+        add.execute(title=title, topics=topics)
+
+
+def test_add_custom_area_rejects_duplicate_of_bundled() -> None:
+    add, _, _ = make_add(InMemoryPresetRepository())
+    with pytest.raises(SettingsValidationError):
+        add.execute(title="Rust", topics=["rust"])  # slug 'rust' already bundled
+
+
+def test_added_area_is_selectable_and_resolves_topics() -> None:
+    repo = InMemoryPresetRepository()
+    add, get, settings_repo = make_add(repo)
+    add.execute(title="Data Engineering", topics=["etl", "spark"])
+
+    update = UpdateSettings(settings_repo, lambda: merge_presets(repo.list_all()), get)
+    body = update.execute({"area_preset": "data-engineering"})
+    assert body["area_preset"] == "data-engineering"

@@ -4,13 +4,30 @@ Kept pure (no ML/DB imports) so it runs in the fast unit-test layer. The pipelin
 block is static metadata describing the fixed ingest→embed→reduce→cluster→label chain.
 """
 
+import re
+from collections.abc import Callable
 from typing import Any
 
-from airadar.domain.ports import SettingsRepository, UpdateBroadcaster
+from airadar.domain.ports import PresetRepository, SettingsRepository, UpdateBroadcaster
 
 # Validation ranges (frozen API contract).
 MIN_CLUSTER_SIZE_RANGE = (2, 20)
 MIN_TOOLS_RANGE = (2, 100)
+
+# Custom-area input limits.
+MAX_TITLE_LEN = 64
+MAX_TOPICS = 12
+MAX_TOPIC_LEN = 40
+
+
+def _as_provider(presets: "list[Any] | Callable[[], list[Any]]") -> "Callable[[], list[Any]]":
+    """Accept a static list (tests) or a live provider (custom presets in the DB)."""
+    return presets if callable(presets) else (lambda: presets)
+
+
+def slugify(text: str) -> str:
+    """Kebab-case slug: lowercased, non-alphanumeric runs collapsed to a single dash."""
+    return re.sub(r"[^a-z0-9]+", "-", text.strip().lower()).strip("-")
 
 # Static description of the (fixed) clustering pipeline.
 PIPELINE = {
@@ -36,12 +53,12 @@ class GetSettings:
     def __init__(
         self,
         settings: SettingsRepository,
-        presets: list[Any],
+        presets: "list[Any] | Callable[[], list[Any]]",
         default_min_cluster_size: int,
         default_min_tools: int,
     ) -> None:
         self._settings = settings
-        self._presets = presets
+        self._presets = _as_provider(presets)
         self._default_min_cluster_size = default_min_cluster_size
         self._default_min_tools = default_min_tools
 
@@ -57,7 +74,7 @@ class GetSettings:
             "area_preset": row.area_preset,
             "min_cluster_size": min_cluster_size,
             "min_tools": min_tools,
-            "presets": [{"slug": p.slug, "title": p.title} for p in self._presets],
+            "presets": [{"slug": p.slug, "title": p.title} for p in self._presets()],
             "pipeline": dict(PIPELINE),
         }
 
@@ -66,12 +83,12 @@ class UpdateSettings:
     def __init__(
         self,
         settings: SettingsRepository,
-        presets: list[Any],
+        presets: "list[Any] | Callable[[], list[Any]]",
         get_settings: GetSettings,
         broadcaster: UpdateBroadcaster | None = None,
     ) -> None:
         self._settings = settings
-        self._presets = presets
+        self._presets = _as_provider(presets)
         self._get_settings = get_settings
         self._broadcaster = broadcaster
 
@@ -87,7 +104,7 @@ class UpdateSettings:
         fields: dict = {}
         if "area_preset" in patch and patch["area_preset"] is not None:
             slug = patch["area_preset"]
-            if slug not in _preset_slugs(self._presets):
+            if slug not in _preset_slugs(self._presets()):
                 raise SettingsValidationError(f"unknown area preset: {slug!r}")
             fields["area_preset"] = slug
         if "min_cluster_size" in patch and patch["min_cluster_size"] is not None:
@@ -106,3 +123,55 @@ class UpdateSettings:
         if not isinstance(value, int) or isinstance(value, bool) or not (low <= value <= high):
             raise SettingsValidationError(f"{name} must be an integer in [{low}, {high}]")
         return value
+
+
+class AddCustomArea:
+    """Create a user-defined radar area from a title + GitHub topics. The slug is
+    derived from the title; creation just persists it (selecting it is a separate
+    settings PATCH that triggers the worker's swap)."""
+
+    def __init__(
+        self,
+        presets: "Callable[[], list[Any]]",
+        repo: PresetRepository,
+        get_settings: GetSettings,
+    ) -> None:
+        self._presets = _as_provider(presets)
+        self._repo = repo
+        self._get_settings = get_settings
+
+    def execute(self, title: str, topics: list[Any]) -> dict:
+        title = (title or "").strip()
+        if not (1 <= len(title) <= MAX_TITLE_LEN):
+            raise SettingsValidationError(f"title must be 1–{MAX_TITLE_LEN} characters")
+
+        clean_topics = self._clean_topics(topics)
+        if not clean_topics:
+            raise SettingsValidationError("provide at least one GitHub topic")
+
+        slug = slugify(title)
+        if not slug:
+            raise SettingsValidationError("title must contain a letter or number")
+        if slug in _preset_slugs(self._presets()):
+            raise SettingsValidationError(f"an area named {title!r} already exists")
+
+        # Custom areas have no curated seed (no bundled list for an arbitrary domain).
+        self._repo.add(slug=slug, title=title, topics=clean_topics, seed_file=None)
+        return {"slug": slug, "title": title, "topics": clean_topics}
+
+    @staticmethod
+    def _clean_topics(topics: list[Any]) -> list[str]:
+        if not isinstance(topics, list):
+            raise SettingsValidationError("topics must be a list")
+        cleaned: list[str] = []
+        for raw in topics:
+            topic = slugify(str(raw))
+            if not topic:
+                continue
+            if len(topic) > MAX_TOPIC_LEN:
+                raise SettingsValidationError(f"topic {raw!r} is too long")
+            if topic not in cleaned:
+                cleaned.append(topic)
+        if len(cleaned) > MAX_TOPICS:
+            raise SettingsValidationError(f"at most {MAX_TOPICS} topics")
+        return cleaned

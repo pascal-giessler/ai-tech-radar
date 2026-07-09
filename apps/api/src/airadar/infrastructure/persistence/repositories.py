@@ -12,9 +12,11 @@ from airadar.domain.model.tool import Tool
 from airadar.infrastructure.persistence.orm import (
     SETTINGS_ROW_ID,
     clusters_table,
+    custom_presets_table,
     radar_settings_table,
     tools_table,
 )
+from airadar.infrastructure.sources.presets import Preset
 
 
 def _tool_to_row(tool: Tool) -> dict:
@@ -172,6 +174,38 @@ class SqlClusterRepository:
             keywords=list(row.keywords or []),
             description=row.description or "",
         )
+
+
+class SqlPresetRepository:
+    """User-added radar areas, persisted so they survive restarts and reach both
+    the API (settings list) and the worker (topics to ingest)."""
+
+    def __init__(self, engine: Engine) -> None:
+        self._engine = engine
+
+    def list_all(self) -> list[Preset]:
+        with self._engine.connect() as conn:
+            rows = conn.execute(select(custom_presets_table)).all()
+        return [
+            Preset(
+                slug=r.slug,
+                title=r.title,
+                topics=list(r.topics or []),
+                seed_file=r.seed_file,
+            )
+            for r in rows
+        ]
+
+    def add(self, slug: str, title: str, topics: list[str], seed_file: str | None = None) -> None:
+        stmt = pg_insert(custom_presets_table).values(
+            slug=slug, title=title, topics=topics, seed_file=seed_file
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[custom_presets_table.c.slug],
+            set_={"title": title, "topics": topics, "seed_file": seed_file},
+        )
+        with self._engine.begin() as conn:
+            conn.execute(stmt)
 
 
 class SqlSettingsRepository:

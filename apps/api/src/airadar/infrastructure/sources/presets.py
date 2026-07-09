@@ -66,3 +66,18 @@ def get_preset(slug: str) -> Preset:
 
 def is_known_preset(slug: str) -> bool:
     return any(p.slug == slug for p in load_presets())
+
+
+def merge_presets(custom: list[Preset]) -> list[Preset]:
+    """Bundled presets first, then user-added ones not already bundled (by slug)."""
+    bundled = load_presets()
+    seen = {p.slug for p in bundled}
+    return bundled + [p for p in custom if p.slug not in seen]
+
+
+def resolve_preset(slug: str, custom: list[Preset]) -> Preset:
+    """Look up a slug across bundled + custom presets. Raises KeyError if unknown."""
+    for preset in merge_presets(custom):
+        if preset.slug == slug:
+            return preset
+    raise KeyError(slug)

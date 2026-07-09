@@ -20,12 +20,13 @@ from airadar.infrastructure.ml.projector import UmapProjector
 from airadar.infrastructure.persistence.database import init_db, make_engine
 from airadar.infrastructure.persistence.repositories import (
     SqlClusterRepository,
+    SqlPresetRepository,
     SqlSettingsRepository,
     SqlToolRepository,
 )
 from airadar.infrastructure.pgnotify import PgNotifyPublisher
 from airadar.infrastructure.sources.composite import CompositeToolSource
-from airadar.infrastructure.sources.presets import get_preset
+from airadar.infrastructure.sources.presets import resolve_preset
 from airadar.infrastructure.sources.seed import SeedToolSource
 
 logger = logging.getLogger("airadar")
@@ -75,6 +76,7 @@ class RefreshJob:
         clock: SystemClock,
         settings_repo,
         tools,
+        preset_repo,
         github_source: GithubToolSource,
         seed_source: SeedToolSource,
         default_min_cluster_size: int,
@@ -86,6 +88,7 @@ class RefreshJob:
         self._clock = clock
         self._settings_repo = settings_repo
         self._tools = tools
+        self._preset_repo = preset_repo
         self._github_source = github_source
         self._seed_source = seed_source
         self._default_min_cluster_size = default_min_cluster_size
@@ -114,7 +117,7 @@ class RefreshJob:
         area = row.area_preset
         scoped = False
         try:
-            preset = get_preset(row.area_preset)
+            preset = resolve_preset(row.area_preset, self._preset_repo.list_all())
             self._github_source.set_topics(preset.topics)
             self._seed_source.set_seed_file(preset.seed_file)
             area = preset.slug
@@ -149,6 +152,7 @@ def build_refresh_job(settings: Settings) -> RefreshJob:
     tools = SqlToolRepository(engine)
     clusters = SqlClusterRepository(engine)
     settings_repo = SqlSettingsRepository(engine)
+    preset_repo = SqlPresetRepository(engine)
 
     github_source = GithubToolSource(token=settings.github_token)
     seed_source = SeedToolSource()
@@ -178,6 +182,7 @@ def build_refresh_job(settings: Settings) -> RefreshJob:
         clock=SystemClock(),
         settings_repo=settings_repo,
         tools=tools,
+        preset_repo=preset_repo,
         github_source=github_source,
         seed_source=seed_source,
         default_min_cluster_size=settings.min_cluster_size,

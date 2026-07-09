@@ -223,6 +223,11 @@ it from the area selector. Bundled presets: **AI & Dev Tools** (default), **Rust
 **Platform & DevOps**. That is the whole change needed to turn this into a "trending Rust
 radar" or a "trending DevOps radar".
 
+**No rebuild needed for a one-off:** the Clusters → Configuration panel has a **New area**
+form — give it a name and GitHub topics and it's created (persisted in the `custom_presets`
+table), switched to, and scanned live. Use `presets.json` for the areas you want to ship in
+the image; use the form to spin one up on the fly.
+
 ## CI/CD
 
 GitHub Actions ([`​.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on every PR

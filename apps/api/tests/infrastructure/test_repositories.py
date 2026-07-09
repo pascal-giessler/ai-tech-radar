@@ -35,6 +35,22 @@ def repos():
     engine.dispose()
 
 
+def test_custom_preset_repo_round_trips_and_merges(repos) -> None:
+    from airadar.infrastructure.persistence.database import make_engine
+    from airadar.infrastructure.persistence.repositories import SqlPresetRepository
+    from airadar.infrastructure.sources.presets import merge_presets
+
+    repo = SqlPresetRepository(make_engine(TEST_DATABASE_URL))
+    repo.add("data-eng", "Data Engineering", ["etl", "spark"], seed_file=None)
+
+    custom = repo.list_all()
+    assert [(p.slug, p.title, p.topics) for p in custom] == [
+        ("data-eng", "Data Engineering", ["etl", "spark"])
+    ]
+    slugs = {p.slug for p in merge_presets(custom)}
+    assert slugs >= {"ai", "rust", "platform", "data-eng"}
+
+
 def make_tool(name: str = "rtk", score: float = 5.0, with_extras: bool = True) -> Tool:
     tool = Tool(
         ref=RepoRef("acme", name),
