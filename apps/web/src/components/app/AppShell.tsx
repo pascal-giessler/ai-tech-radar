@@ -10,6 +10,7 @@ import { EMPTY_FILTERS, type RecordFilters } from "@/lib/filters";
 import type { LandscapeData } from "@/lib/types";
 import { usePersistentState } from "@/hooks/usePersistentState";
 
+import { AreaSelector } from "./AreaSelector";
 import { ClustersView } from "./ClustersView";
 import { DetailPanel, FullDossier } from "./Dossier";
 import { OverviewView } from "./OverviewView";
@@ -371,6 +372,7 @@ export function AppShell({ initial }: { initial: LandscapeData }) {
                 ))}
               </div>
             )}
+            <AreaSelector controller={settings} />
             <div className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-[rgba(116,224,255,0.14)] bg-[rgba(9,18,30,0.5)] px-3 py-[7px] font-mono text-[10px] tracking-[0.08em] text-[#5f8299]">
               <span className="live-dot h-1.5 w-1.5 rounded-full" style={{ background: LIVE, boxShadow: `0 0 8px ${LIVE}` }} />
               LIVE · {scanTime}
