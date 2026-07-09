@@ -61,6 +61,13 @@ class SettingsRepository(Protocol):
     def update(self, **fields) -> RadarSettings: ...
 
 
+class PresetRepository(Protocol):
+    """User-added radar areas (bundled presets stay in code)."""
+
+    def list_all(self) -> list: ...
+    def add(self, slug: str, title: str, topics: list[str], seed_file: str | None = None) -> None: ...
+
+
 class UpdateBroadcaster(Protocol):
     def publish(self, event: dict) -> None: ...
 

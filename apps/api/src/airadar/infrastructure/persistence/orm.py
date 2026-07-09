@@ -57,6 +57,17 @@ clusters_table = Table(
     Column("description", Text, nullable=False, default=""),
 )
 
+# User-defined radar areas, added from the UI. Bundled presets stay in code;
+# these are merged on top so a fork can track any domain without a rebuild.
+custom_presets_table = Table(
+    "custom_presets",
+    metadata,
+    Column("slug", String(64), primary_key=True),
+    Column("title", String(120), nullable=False),
+    Column("topics", JSON, nullable=False, default=list),
+    Column("seed_file", String(120), nullable=True),
+)
+
 # Single-row (id fixed = 1) tunable configuration. Nullable knobs fall back to
 # env/const defaults when unset.
 radar_settings_table = Table(

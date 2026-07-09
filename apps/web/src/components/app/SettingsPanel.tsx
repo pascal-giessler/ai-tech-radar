@@ -8,9 +8,31 @@ const label = "font-mono text-[10px] uppercase tracking-[0.16em] text-[#5f8299]"
 
 /** Live clustering configuration: what to track, how finely, and re-scan on demand. */
 export function SettingsPanel({ controller }: { controller: SettingsController }) {
-  const { settings, loading, saving, error, save } = controller;
+  const { settings, loading, saving, error, save, createArea } = controller;
   const [minClusterSize, setMinClusterSize] = useState(4);
   const [minTools, setMinTools] = useState(12);
+  const [adding, setAdding] = useState(false);
+  const [title, setTitle] = useState("");
+  const [topics, setTopics] = useState("");
+  const [addError, setAddError] = useState<string | null>(null);
+
+  const submitArea = async () => {
+    setAddError(null);
+    const list = topics.split(",").map((t) => t.trim()).filter(Boolean);
+    if (!title.trim() || list.length === 0) {
+      setAddError("Give the area a name and at least one topic.");
+      return;
+    }
+    try {
+      const created = await createArea(title.trim(), list);
+      setTitle("");
+      setTopics("");
+      setAdding(false);
+      await save({ area_preset: created.slug }).catch(() => {}); // switch to it now
+    } catch (e) {
+      setAddError(e instanceof Error ? e.message : "Could not create the area.");
+    }
+  };
 
   useEffect(() => {
     if (settings) {
@@ -74,9 +96,58 @@ export function SettingsPanel({ controller }: { controller: SettingsController }
           })}
         </div>
         <div className="mt-2 text-[11px] text-[#4d6f86]">
-          Switching swaps the radar to that domain: it re-ingests trending repos and prunes the previous area. Fork
-          the radar for any topic by adding a preset.
+          Switching swaps the radar to that domain: it re-ingests trending repos and prunes the previous area.
         </div>
+
+        {/* Add a custom area */}
+        {adding ? (
+          <div className="mt-3 rounded-xl border border-[rgba(116,224,255,0.16)] bg-[rgba(6,13,22,0.6)] p-3">
+            <div className={`${label} mb-1.5`}>New area</div>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Name — e.g. Data Engineering"
+              maxLength={64}
+              className="mb-2 w-full rounded-lg border border-[rgba(116,224,255,0.16)] bg-[rgba(9,18,30,0.7)] px-2.5 py-2 text-[12.5px] text-[#e2f3ff] placeholder:text-[#4d6f86]"
+            />
+            <input
+              value={topics}
+              onChange={(e) => setTopics(e.target.value)}
+              placeholder="GitHub topics, comma-separated — e.g. etl, spark, airflow"
+              className="w-full rounded-lg border border-[rgba(116,224,255,0.16)] bg-[rgba(9,18,30,0.7)] px-2.5 py-2 text-[12.5px] text-[#e2f3ff] placeholder:text-[#4d6f86]"
+            />
+            {addError && <div className="mt-2 text-[11px] text-[#e6a9a9]">{addError}</div>}
+            <div className="mt-2 text-[10.5px] leading-[1.45] text-[#4d6f86]">
+              Creates the area and switches to it — the radar re-scans those topics live.
+            </div>
+            <div className="mt-2.5 flex items-center gap-2">
+              <button
+                disabled={saving}
+                onClick={submitArea}
+                className="rounded-[9px] px-3 py-[7px] text-[12px] font-semibold text-[#03121a] transition-transform active:scale-[0.98] disabled:opacity-60"
+                style={{ background: "#74e0ff" }}
+              >
+                Add &amp; switch
+              </button>
+              <button
+                onClick={() => {
+                  setAdding(false);
+                  setAddError(null);
+                }}
+                className="rounded-[9px] border border-[rgba(116,224,255,0.16)] px-3 py-[7px] text-[12px] text-[#93b4c9] transition-colors hover:text-[#e2f3ff]"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setAdding(true)}
+            className="mt-2.5 inline-flex items-center gap-1.5 rounded-[9px] border border-dashed border-[rgba(116,224,255,0.28)] px-3 py-[7px] text-[12px] text-[#93b4c9] transition-colors hover:border-[rgba(116,224,255,0.5)] hover:text-[#e2f3ff]"
+          >
+            <span className="text-[14px] leading-none text-[#74e0ff]">+</span> New area
+          </button>
+        )}
       </div>
 
       {/* Granularity */}

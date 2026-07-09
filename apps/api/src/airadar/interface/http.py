@@ -18,6 +18,11 @@ class SettingsPatch(BaseModel):
     min_tools: int | None = None
 
 
+class NewArea(BaseModel):
+    title: str
+    topics: list[str] = []
+
+
 def create_app(container: Container, lifespan=None) -> FastAPI:
     app = FastAPI(title="AI Radar API", lifespan=lifespan)
 
@@ -102,6 +107,15 @@ def create_app(container: Container, lifespan=None) -> FastAPI:
             raise HTTPException(status_code=503, detail="settings unavailable")
         try:
             return container.update_settings.execute(patch.model_dump(exclude_unset=True))
+        except SettingsValidationError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.post("/api/areas", status_code=201)
+    def add_area(body: NewArea) -> dict:
+        if container.add_custom_area is None:
+            raise HTTPException(status_code=503, detail="settings unavailable")
+        try:
+            return container.add_custom_area.execute(title=body.title, topics=body.topics)
         except SettingsValidationError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 

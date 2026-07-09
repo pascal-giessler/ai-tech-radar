@@ -10,17 +10,18 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
 from airadar.application.queries import GetLandscape, GetTool, ListClusters, ListTools
-from airadar.application.settings import GetSettings, UpdateSettings
+from airadar.application.settings import AddCustomArea, GetSettings, UpdateSettings
 from airadar.config import Settings
 from airadar.infrastructure.broadcast import AsyncFanoutBroadcaster
 from airadar.infrastructure.persistence.database import DatabasePing, make_engine
 from airadar.infrastructure.persistence.repositories import (
     SqlClusterRepository,
+    SqlPresetRepository,
     SqlSettingsRepository,
     SqlToolRepository,
 )
 from airadar.infrastructure.pgnotify import CONFIG_CHANNEL, PgNotifyListener, PgNotifyPublisher
-from airadar.infrastructure.sources.presets import load_presets
+from airadar.infrastructure.sources.presets import merge_presets
 from airadar.interface.container import Container, RadarStatus
 from airadar.interface.http import create_app
 from airadar.runtime import configure_logging, logger
@@ -34,17 +35,22 @@ def build_container(settings: Settings) -> tuple[Container, PgNotifyListener]:
     broadcaster = AsyncFanoutBroadcaster()
     status = RadarStatus()
 
-    presets = load_presets()
+    preset_repo = SqlPresetRepository(engine)
+    # Live provider: bundled presets + any the user added from the UI.
+    presets_provider = lambda: merge_presets(preset_repo.list_all())  # noqa: E731
     get_settings = GetSettings(
         settings_repo,
-        presets,
+        presets_provider,
         default_min_cluster_size=settings.min_cluster_size,
         default_min_tools=settings.min_tools_for_clustering,
     )
     # The api doesn't recompute; it just signals the worker via a NOTIFY on the
     # config channel (the worker LISTENs and does the ingest+recompute).
     config_publisher = PgNotifyPublisher(settings.database_url, channel=CONFIG_CHANNEL)
-    update_settings = UpdateSettings(settings_repo, presets, get_settings, config_publisher)
+    update_settings = UpdateSettings(
+        settings_repo, presets_provider, get_settings, config_publisher
+    )
+    add_custom_area = AddCustomArea(presets_provider, preset_repo, get_settings)
 
     container = Container(
         get_landscape=GetLandscape(tools, clusters),
@@ -57,6 +63,7 @@ def build_container(settings: Settings) -> tuple[Container, PgNotifyListener]:
         settings=settings_repo,
         get_settings=get_settings,
         update_settings=update_settings,
+        add_custom_area=add_custom_area,
         status=status,
         db_ping=DatabasePing(engine),
     )
