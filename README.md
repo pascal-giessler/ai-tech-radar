@@ -4,11 +4,13 @@
 
 # AI Radar
 
-**The living technology radar for AI dev tools.**
+**The living technology radar for any tech domain — AI out of the box.**
 
-Trending GitHub repos and AI dev tools, scanned continuously and plotted on a live radar —
-by **momentum** (range) and **semantic category** (bearing). The Thoughtworks Technology
-Radar's mental model, kept current by data instead of a twice-a-year PDF.
+Trending GitHub repos, scanned continuously and plotted on a live radar — by **momentum**
+(range) and **semantic category** (bearing). Ships pointed at AI dev tools, but the tracked
+area is yours to define: switch to Rust or DevOps from the UI, or add any GitHub topics and
+watch the clusters re-emerge for that domain. The Thoughtworks Technology Radar's mental
+model, kept current by data instead of a twice-a-year PDF.
 
 [![CI](https://github.com/pascal-giessler/ai-tech-radar/actions/workflows/ci.yml/badge.svg)](https://github.com/pascal-giessler/ai-tech-radar/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)

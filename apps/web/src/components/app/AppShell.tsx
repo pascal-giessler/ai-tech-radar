@@ -22,8 +22,8 @@ import { EyeToggle } from "./visibility";
 type View = "overview" | "radar" | "records" | "clusters";
 
 const VIEW_META: Record<View, [string, string]> = {
-  overview: ["Overview", "The AI stack at a glance — momentum, maturity and movement"],
-  radar: ["Radar", "Live momentum map of the open-source AI stack"],
+  overview: ["Overview", "The tracked domain at a glance — momentum, maturity and movement"],
+  radar: ["Radar", "Live momentum map of the tracked domain"],
   records: ["Records", "Full register of every tracked contact — filter and sort"],
   clusters: ["Clusters", "How the categories form, how to tune them, and what's in each"],
 };

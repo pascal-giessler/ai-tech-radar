@@ -8,7 +8,7 @@ export function buildLlmsTxt(data: LandscapeData, siteUrl: string): string {
   const lines: string[] = [
     "# AI Radar",
     "",
-    "> A live semantic landscape of trending GitHub repos and AI developer tools.",
+    "> A live semantic landscape of trending GitHub repos in the tracked domain.",
     "> Tools are clustered automatically by what they do (embeddings), ranked by",
     "> star momentum, and re-scanned continuously. Clusters are emergent, not curated.",
     ">",

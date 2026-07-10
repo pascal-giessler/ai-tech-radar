@@ -17,9 +17,9 @@ const plexMono = IBM_Plex_Mono({
 
 const SITE_URL = process.env.SITE_URL ?? "http://localhost:3000";
 
-const TITLE = "AI Radar — the living technology radar for AI dev tools";
+const TITLE = "AI Radar — a living technology radar for any tech domain";
 const DESCRIPTION =
-  "A live scanning radar for the open-source AI stack: trending GitHub repos and AI dev tools clustered by what they do and ranked by momentum, re-scanned continuously. Explore adoption rings, filter the catalog, and open a full dossier on any tool.";
+  "A live scanning radar for trending GitHub repos: clustered by what they do and ranked by momentum, re-scanned continuously. Ships pointed at AI dev tools — switch the tracked domain from the UI. Explore adoption rings, filter the catalog, and open a full dossier on any tool.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
